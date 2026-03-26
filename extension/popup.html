@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚀 DarkVolt Audio Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 380px;
+      min-height: 480px;
+      background: #0a0a0a;
+      color: #39FF14;
+      font-family: 'Orbitron', monospace;
+      overflow: hidden;
+    }
+    
+    .container {
+      padding: 20px;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      border: 2px solid #39FF14;
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(57, 255, 20, 0.3);
+    }
+    
+    .logo {
+      font-size: 24px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+      background: linear-gradient(45deg, #39FF14, #00FF88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 0.05em;
+    }
+    
+    .status-section {
+      background: rgba(57, 255, 20, 0.05);
+      border: 1px solid rgba(57, 255, 20, 0.2);
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .status-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 10px;
+      color: #39FF14;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+    }
+    
+    .status-label {
+      color: #888;
+    }
+    
+    .status-value {
+      color: #39FF14;
+      font-weight: 700;
+    }
+    
+    .status-value.active {
+      color: #00FF88;
+      text-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+    }
+    
+    .status-value.inactive {
+      color: #FF1A1A;
+    }
+    
+    .controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .btn {
+      padding: 12px 20px;
+      background: transparent;
+      border: 1px solid #39FF14;
+      color: #39FF14;
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .btn:hover:before {
+      left: 100%;
+    }
+    
+    .btn:hover {
+      background: rgba(57, 255, 20, 0.1);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+      transform: translateY(-1px);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn.primary {
+      background: #39FF14;
+      color: #0a0a0a;
+    }
+    
+    .btn.primary:hover {
+      background: #00FF88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+    }
+    
+    .btn.danger {
+      border-color: #FF1A1A;
+      color: #FF1A1A;
+    }
+    
+    .btn.danger:hover {
+      background: rgba(255, 26, 26, 0.1);
+      box-shadow: 0 0 15px rgba(255, 26, 26, 0.3);
+    }
+    
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    
+    .btn:disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .info-section {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+      padding: 12px;
+      margin-top: 15px;
+    }
+    
+    .info-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      line-height: 1.4;
+      color: #888;
+    }
+    
+    .quality-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .quality-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #FF1A1A;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .quality-dot.high {
+      background: #00FF88;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+    
+    .quality-dot.medium {
+      background: #FFD700;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    
+    .quality-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      color: #888;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 2px solid #39FF14;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🚀 DarkVolt</div>
+      <div class="subtitle">Native Audio Engine - Professional DJ Streaming</div>
+    </div>
+    
+    <div class="status-section">
+      <div class="status-title">🎛️ Audio Status</div>
+      
+      <div class="status-item">
+        <span class="status-label">Extension:</span>
+        <span class="status-value active">✅ Active</span>
+      </div>
+      
+      <div class="status-item">
+        <span class="status-label">Stream:</span>
+        <span class="status-value inactive" id="stream-status">🔴 Inactive</span>
+      </div>
+      
+      <div class="status-item">
+        <span class="status-label">Quality:</span>
+        <span class="status-value" id="quality-status">44.1kHz Stereo</span>
+      </div>
+      
+      <div class="quality-indicator">
+        <div class="quality-dot" id="quality-dot"></div>
+        <span class="quality-text" id="quality-text">Ready to capture</span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <button class="btn primary" id="capture-btn">
+        🎵 Capture System Audio
+      </button>
+      
+      <button class="btn danger" id="stop-btn" style="display: none;">
+        🛑 Stop Audio Capture
+      </button>
+      
+      <button class="btn" id="test-btn">
+        🧪 Test Audio Quality
+      </button>
+      
+      <button class="btn" id="settings-btn">
+        ⚙️ Audio Settings
+      </button>
+    </div>
+    
+    <div class="info-section">
+      <div class="info-text">
+        🚀 DarkVolt Audio Engine captures system audio for professional DJ streaming.
+        Compatible with YouTube, SoundCloud, Spotify, and any audio source.
+        <br><br>
+        💡 Tip: For best quality, use 44.1kHz stereo with no audio processing.
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

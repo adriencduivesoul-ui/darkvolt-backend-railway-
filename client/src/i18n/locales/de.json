@@ -1,0 +1,184 @@
+﻿{
+  "nav": {
+    "live": "Live",
+    "univers": "Universum",
+    "shows": "Sendungen",
+    "contact": "Kontakt",
+    "listen": "▶ HÖREN",
+    "login": "ANMELDUNG"
+  },
+  "hero": {
+    "tagline": "Underground Electronic Frequency",
+    "listenLive": "▶ LIVE HÖREN",
+    "enterPlatform": "PLATTFORM BETRETEN",
+    "onAir": "ON AIR — 24/7 LIVE STREAM",
+    "scroll": "SCROLL"
+  },
+  "bento": {
+    "sectionLabel": "DAS DARKVOLT-UNIVERSUM",
+    "headline": "TAUCHE IN DIE DUNKELHEIT EIN",
+    "liveNow": "JETZT LIVE",
+    "sessionTitle": "UNDERGROUND SESSIONS",
+    "sessionDesc": "Die besten DJs der Underground-Elektro-Szene",
+    "identity": "IDENTITÄT",
+    "darkIdentity": "DARK IDENTITY",
+    "frequencyTitle": "REINE FREQUENZ",
+    "frequencyDesc": "Hochqualitäts-Audio, unkomprimiertes Streaming, roher und authentischer Sound",
+    "worldwide": "UNDERGROUND WELTWEIT",
+    "stats": [
+      { "label": "AUSSTRAHLUNG" },
+      { "label": "FREIER ZUGANG" },
+      { "label": "SESSIONS" },
+      { "label": "UNDERGROUND" }
+    ],
+    "features": [
+      { "title": "LIVE STREAM", "desc": "Höre live zu, wenn ein DJ auflegt — Techno, Industrial, Dark Electro, EBM" },
+      { "title": "DUNKLE SZENE", "desc": "Alles was kommerzielle Sender nicht spielen wollen — roh, authentisch, ohne redaktionellen Filter" },
+      { "title": "REPLAYS", "desc": "Vergangene Sessions bleiben zwischen Streams frei verfügbar — kein Set geht verloren" },
+      { "title": "UNABHÄNGIG", "desc": "Kein Major, keine kommerziellen Einschränkungen — Programmierung kommt aus der Szene, nicht von Algorithmen" }
+    ]
+  },
+  "manifesto": {
+    "label": "MANIFEST",
+    "line1": "Die Frequenz, die kommerzielle Sender nicht zu senden wagen.",
+    "line2": "Null Major. Null Algorithmus. Null Mainstream.",
+    "line3": "Die rohe Energie der elektronischen Underground-Szene — ohne redaktionellen Filter.",
+    "engagements": [
+      { "label": "FREIES HÖREN", "desc": "Livestream ohne Konto und ohne Abonnement zugänglich" },
+      { "label": "FREIE PROGRAMMIERUNG", "desc": "Kein Major, kein Label diktiert, was gesendet wird" },
+      { "label": "OFFENE REPLAYS", "desc": "Alle archivierten Sessions stehen zwischen Streams zum Hören bereit" },
+      { "label": "IM AUFBAU", "desc": "Plattform im Aufbau — tritt der Community jetzt bei" }
+    ],
+    "cta": "⚡ DER FREQUENZ BEITRETEN"
+  },
+  "footer": {
+    "description": "DarkVolt ist die Underground-Referenzfrequenz. Techno, Industrial, Dark Electro — ohne Kompromiss, ohne Zensur.",
+    "platform": "PLATTFORM",
+    "community": "COMMUNITY",
+    "legal": "RECHTLICHES",
+    "liveStream": "Live Stream",
+    "archives": "Archive",
+    "discord": "Discord",
+    "artists": "Künstler",
+    "submitMix": "Mix einreichen",
+    "mentions": "Impressum",
+    "cgu": "Nutzungsbedingungen",
+    "privacy": "Datenschutz",
+    "contact": "Kontakt",
+    "designedBy": "ENTWORFEN & ENTWICKELT VON",
+    "copyright": "© 2026 DARKVOLT — UNDERGROUND ELECTRONIC FREQUENCY",
+    "signalActive": "SIGNAL AKTIV — 24/7"
+  },
+  "auth": {
+    "tabLogin": "ANMELDUNG",
+    "tabRegister": "REGISTRIERUNG",
+    "tabGuest": "GAST",
+    "back": "← ZURÜCK",
+    "tagline": "Underground Electronic Frequency",
+    "description": "Die Underground-Elektronik-Webradio-Plattform. Techno, Industrial, Dark Electro — ohne Kompromiss.",
+    "signalActive": "SIGNAL AKTIV — 24/7 LIVE",
+    "email": "E-MAIL",
+    "password": "PASSWORT",
+    "username": "BENUTZERNAME",
+    "profile": "PROFIL",
+    "userRole": "🎧 HÖRER",
+    "streamerRole": "🎛️ STREAMER",
+    "loginBtn": "ANMELDEN",
+    "loggingIn": "ANMELDEN...",
+    "registerBtn": "KONTO ERSTELLEN",
+    "registering": "WIRD ERSTELLT...",
+    "noAccount": "Kein Konto?",
+    "signUp": "Registrieren",
+    "orSeparator": "ODER",
+    "discordContinue": "MIT DISCORD FORTFAHREN",
+    "discordRedirecting": "WEITERLEITUNG...",
+    "guestTitle": "GASTZUGANG",
+    "guestDesc": "Greife auf den Livestream und das Programm zu, ohne ein Konto zu erstellen. Eingeschränkte Funktionen.",
+    "guestFeatures": [
+      "✅ Live Stream",
+      "✅ Sendungsplan",
+      "❌ Profil & Verlauf",
+      "❌ Offline-Modus",
+      "❌ Exklusive Inhalte"
+    ],
+    "enterAsGuest": "ALS GAST EINTRETEN →",
+    "guestSession": "Temporäre Sitzung — nicht gespeichert",
+    "error": "Fehler"
+  },
+  "discord": {
+    "loading": "DISCORD-ANMELDUNG LÄUFT…",
+    "creating": "KONTO WIRD ERSTELLT…",
+    "welcome": "WILLKOMMEN BEI DARKVOLT",
+    "chooseProfile": "Profil wählen",
+    "verified": "Discord-Konto verifiziert ✓",
+    "listenerTitle": "HÖRER",
+    "listenerDesc": "Höre Live-Streams, greife auf das Programm und die Archive zu. Dedizierte Hörerschnittstelle.",
+    "streamerTitle": "STREAMER",
+    "streamerDesc": "Verwalte deine Sendungen, reiche Mixes ein und greife auf das Streamer-Dashboard zu.",
+    "createAccount": "MEIN KONTO ERSTELLEN →",
+    "errorTitle": "ANMELDUNG FEHLGESCHLAGEN",
+    "errorDenied": "Autorisierung auf Discord verweigert.",
+    "errorMissing": "Fehlender Parameter in der Discord-Antwort.",
+    "errorUnknown": "Unbekannter Fehler.",
+    "backToLogin": "← ZURÜCK ZUR ANMELDUNG"
+  },
+  "contact": {
+    "tag": "KONTAKT",
+    "title": "Kontaktiere uns",
+    "subtitle": "Eine Frage, eine Partnerschaft, eine Demo einzureichen? Das DarkVolt-Team antwortet innerhalb von 48 Geschäftsstunden.",
+    "formTitle": "Nachricht senden",
+    "infoTitle": "Informationen",
+    "delayTitle": "Antwortzeiten",
+    "communityTitle": "Community",
+    "faqTitle": "Häufig gestellte Fragen",
+    "name": "Name *",
+    "namePlaceholder": "Ihr Name",
+    "email": "E-Mail *",
+    "emailPlaceholder": "ihre@email.de",
+    "subject": "Betreff *",
+    "subjectPlaceholder": "— Betreff auswählen —",
+    "message": "Nachricht *",
+    "messagePlaceholder": "Beschreiben Sie Ihre Anfrage im Detail...",
+    "rgpd": "Mit dem Absenden dieses Formulars stimmen Sie zu, dass Ihre Daten von DarkVolt zur Bearbeitung Ihrer Anfrage verarbeitet werden, gemäß unserer",
+    "rgpdLink": "Datenschutzrichtlinie",
+    "send": "▶ NACHRICHT SENDEN",
+    "sending": "▶ WIRD GESENDET...",
+    "subjects": [
+      "Partnerschaftsanfrage",
+      "Inhalt melden",
+      "Technischer Support",
+      "DSGVO-Anfrage (personenbezogene Daten)",
+      "Presse / Medien",
+      "Sonstiges"
+    ],
+    "emailGeneral": "Allgemeine E-Mail",
+    "supportDelay": "Allgemeiner Support",
+    "supportDelayValue": "< 48 Geschäftsstunden",
+    "rgpdDelay": "DSGVO-Anfragen",
+    "rgpdDelayValue": "< 30 Tage (gesetzlich)",
+    "communityDesc": "Tritt der DarkVolt-Community auf Discord bei:",
+    "discordChat": "Chat & Community",
+    "faq": [
+      {
+        "q": "Wie reiche ich einen Mix ein?",
+        "a": "Nutze das obige Formular mit dem Betreff \"Mix einreichen\". Füge einen SoundCloud-, Mixcloud- oder WeTransfer-Link sowie deine Tracklist bei."
+      },
+      {
+        "q": "Wie werde ich Künstler bei DarkVolt?",
+        "a": "Sende uns deine Demo und einen Link zu deinen Werken. Unser Programmierungsteam antwortet innerhalb von 5 Werktagen."
+      },
+      {
+        "q": "Wie übe ich meine DSGVO-Rechte aus?",
+        "a": "Sende eine E-Mail an rgpd@darkvolt.fr mit deiner Identität und der Art deiner Anfrage. Antwortzeit: 30 Tage."
+      },
+      {
+        "q": "Technisches Problem mit dem Player?",
+        "a": "Versuche, die Seite neu zu laden oder den Cache zu leeren. Wenn das Problem weiterhin besteht, kontaktiere uns über das Formular und wähle \"Technischer Support\"."
+      }
+    ],
+    "successMsg": "Nachricht gesendet!",
+    "successDesc": "Wir antworten innerhalb von 48 Stunden.",
+    "errorRequired": "Alle Felder sind erforderlich.",
+    "errorEmail": "Ungültige E-Mail-Adresse."
+  }
+}

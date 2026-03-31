@@ -5,6 +5,9 @@ import { useStreamerProfile } from '../hooks/useStreamerProfile';
 import { useAuth } from '../contexts/AuthContext';
 import LiveStreamPage from './LiveStream';
 
+// FORCER L'INCLUSION DU HOOK DANS LE BUILD
+console.log('🔧 Hook useStreamApi chargé:', typeof useStreamApi);
+
 const G = '#39FF14';
 const R = '#FF1A1A';
 const CLIP = (s = 14) => `polygon(0 0, calc(100% - ${s}px) 0, 100% ${s}px, 100% 100%, ${s}px 100%, 0 calc(100% - ${s}px))`;
@@ -37,10 +40,14 @@ export default function HomeAuditeur({ onStreamerSelect }: HomeAuditeurProps = {
 
   // Afficher uniquement le streamer live actuel (s'il y en a un)
   useEffect(() => {
+    console.log('🔍 HomeAuditeur: useEffect appelé');
+    console.log('🔍 Status actuel:', status);
+    
     const liveStreamers: StreamerLive[] = [];
     
     // Ajouter le streamer actuel seulement s'il est vraiment live
     if (status.isLive && status.streamerName) {
+      console.log('✅ Streamer live détecté:', status.streamerName);
       liveStreamers.push({
         id: 'current-live',
         username: status.streamerName,
@@ -50,8 +57,13 @@ export default function HomeAuditeur({ onStreamerSelect }: HomeAuditeurProps = {
         avatar: profile?.avatar,
         isLive: true
       });
+    } else {
+      console.log('❌ Aucun streamer live détecté');
+      console.log('🔍 status.isLive:', status.isLive);
+      console.log('🔍 status.streamerName:', status.streamerName);
     }
     
+    console.log('🔍 Streamers live à afficher:', liveStreamers);
     setStreamers(liveStreamers);
     
     // Extraire les genres uniques pour les filtres
@@ -129,6 +141,9 @@ export default function HomeAuditeur({ onStreamerSelect }: HomeAuditeurProps = {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {streamers
             .filter(streamer => {
+              // TOUJOURS afficher le streamer live, peu importe le genre sélectionné
+              if (streamer.isLive) return true;
+              
               if (selectedGenre === 'TOUS') return true;
               // Filtrer par genre (supporte les genres multiples)
               const streamerGenres = streamer.genre ? streamer.genre.split(',').map(g => g.trim()) : [];

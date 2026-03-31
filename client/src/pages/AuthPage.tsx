@@ -50,24 +50,32 @@ export default function AuthPage() {
   const [rError, setRError] = useState('');
   const [rLoading, setRLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLLoading(true); setLError('');
-    setTimeout(() => {
-      const res = login(lEmail, lPass);
+    try {
+      const res = await login(lEmail, lPass);
       if (res.success) navigate('/dashboard');
-      else { setLError(res.error || 'Erreur'); setLLoading(false); }
-    }, 600);
+      else { setLError(res.error || 'Erreur'); }
+    } catch (error) {
+      setLError('Erreur de connexion');
+    } finally {
+      setLLoading(false);
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRLoading(true); setRError('');
-    setTimeout(() => {
-      const res = register(rName, rEmail, rPass, rRole);
+    try {
+      const res = await register(rName, rEmail, rPass, rRole);
       if (res.success) navigate('/dashboard');
-      else { setRError(res.error || 'Erreur'); setRLoading(false); }
-    }, 600);
+      else { setRError(res.error || 'Erreur'); }
+    } catch (error) {
+      setRError('Erreur d\'inscription');
+    } finally {
+      setRLoading(false);
+    }
   };
 
   const handleGuest = () => {

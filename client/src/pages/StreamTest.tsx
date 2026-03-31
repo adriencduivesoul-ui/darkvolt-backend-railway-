@@ -12,7 +12,8 @@ export default function StreamTest() {
   const { status } = useStreamApi();
   const { remoteStream, connected, hasVideo, join, leave } = useWebRTCViewer(
     user?.id || 'test-user', 
-    user?.username || 'TestUser'
+    user?.username || 'TestUser',
+    status?.streamerId
   );
 
   const [logs, setLogs] = useState<string[]>([]);

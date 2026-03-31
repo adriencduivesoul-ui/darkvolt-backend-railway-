@@ -15,8 +15,8 @@ export interface DarkVoltUser {
 interface AuthContextType {
   user: DarkVoltUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  register: (username: string, email: string, password: string, role: 'user' | 'streamer') => { success: boolean; error?: string };
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (username: string, email: string, password: string, role: 'user' | 'streamer') => Promise<{ success: boolean; error?: string }>;
   loginWithDiscord: (profile: DiscordProfile, role?: 'user' | 'streamer') => void;
   discordUserExists: (profile: DiscordProfile) => boolean;
   loginAsGuest: () => void;
@@ -25,96 +25,159 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const USERS_KEY = 'darkvolt_users';
-const AUTH_KEY = 'darkvolt_auth';
-const SESSION_KEY = 'darkvolt_session';
+const API_URL = import.meta.env.VITE_API_URL || 'https://darkvolt-backend-production.up.railway.app';
+const TOKEN_KEY = 'darkvolt_token';
+const USER_KEY = 'darkvolt_user';
 
-function getUsers(): DarkVoltUser[] {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
-}
-function getAuthRecords(): { email: string; password: string }[] {
-  try { return JSON.parse(localStorage.getItem(AUTH_KEY) || '[]'); } catch { return []; }
+// Helper pour les appels API avec token
+async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Erreur API');
+  }
+
+  return response.json();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<DarkVoltUser | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SESSION_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch {}
+    // Vérifier le token au démarrage
+    const token = localStorage.getItem(TOKEN_KEY);
+    const storedUser = localStorage.getItem(USER_KEY);
+    
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+        // Valider le token avec le backend
+        apiCall('/api/auth/me').catch(() => {
+          // Token invalide, nettoyer
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          setUser(null);
+        });
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        setUser(null);
+      }
+    }
   }, []);
 
-  const login = (email: string, password: string): { success: boolean; error?: string } => {
-    const users = getUsers();
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!found) return { success: false, error: 'Aucun compte trouvé avec cet email' };
-    const auth = getAuthRecords().find(a => a.email.toLowerCase() === email.toLowerCase());
-    if (!auth || auth.password !== password) return { success: false, error: 'Mot de passe incorrect' };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(found));
-    setUser(found);
-    return { success: true };
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const data = await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const user: DarkVoltUser = {
+        id: data.user.id,
+        username: data.user.username,
+        email: data.user.email,
+        role: data.user.role || 'user', // Valeur par défaut
+        createdAt: data.user.created_at,
+        avatar: data.user.avatar_url,
+      };
+
+      // Sauvegarder token et user
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      setUser(user);
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
 
-  const register = (username: string, email: string, password: string, role: 'user' | 'streamer'): { success: boolean; error?: string } => {
-    const users = getUsers();
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      return { success: false, error: 'Cet email est déjà utilisé' };
-    }
-    if (username.length < 3) return { success: false, error: 'Pseudo trop court (min 3 caractères)' };
-    if (password.length < 6) return { success: false, error: 'Mot de passe trop court (min 6 caractères)' };
+  const register = async (username: string, email: string, password: string, role: 'user' | 'streamer'): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const data = await apiCall('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, email, password, role }),
+      });
 
-    const newUser: DarkVoltUser = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      username,
-      email,
-      role,
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
-    const auth = getAuthRecords();
-    localStorage.setItem(AUTH_KEY, JSON.stringify([...auth, { email, password }]));
-    localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
-    setUser(newUser);
-    return { success: true };
+      const user: DarkVoltUser = {
+        id: data.user.id,
+        username: data.user.username,
+        email: data.user.email,
+        role: data.user.role || 'user', // Valeur par défaut
+        createdAt: data.user.created_at,
+        avatar: data.user.avatar_url,
+      };
+
+      // Sauvegarder token et user
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      setUser(user);
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
 
   const discordUserExists = (profile: DiscordProfile): boolean => {
-    const users = getUsers();
-    if (users.find(u => u.discordId === profile.id)) return true;
-    if (profile.email && users.find(u => u.email.toLowerCase() === profile.email!.toLowerCase())) return true;
-    return false;
+    // Pour l'instant, on garde la logique localStorage pour Discord
+    // TODO: Implémenter avec Superbase plus tard
+    const USERS_KEY = 'darkvolt_users';
+    try { 
+      const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+      if (users.find((u: any) => u.discordId === profile.id)) return true;
+      if (profile.email && users.find((u: any) => u.email.toLowerCase() === profile.email!.toLowerCase())) return true;
+      return false;
+    } catch { return false; }
   };
 
   const loginWithDiscord = (profile: DiscordProfile, role: 'user' | 'streamer' = 'user'): void => {
-    const users = getUsers();
-    const avatar = discordAvatarUrl(profile);
+    // Pour l'instant, on garde la logique localStorage pour Discord
+    // TODO: Implémenter avec Superbase plus tard
+    const USERS_KEY = 'darkvolt_users';
+    const SESSION_KEY = 'darkvolt_session';
+    
+    try {
+      const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+      const avatar = discordAvatarUrl(profile);
 
-    let existing = users.find(u => u.discordId === profile.id);
-    if (!existing && profile.email) {
-      existing = users.find(u => u.email.toLowerCase() === profile.email!.toLowerCase());
-    }
+      let existing = users.find((u: any) => u.discordId === profile.id);
+      if (!existing && profile.email) {
+        existing = users.find((u: any) => u.email.toLowerCase() === profile.email!.toLowerCase());
+      }
 
-    if (existing) {
-      const updated: DarkVoltUser = { ...existing, discordId: profile.id, avatar: avatar ?? existing.avatar };
-      const newList = users.map(u => u.id === existing!.id ? updated : u);
-      localStorage.setItem(USERS_KEY, JSON.stringify(newList));
-      localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
-      setUser(updated);
-    } else {
-      const newUser: DarkVoltUser = {
-        id: 'discord_' + profile.id,
-        username: profile.global_name ?? profile.username,
-        email: profile.email ?? '',
-        role,
-        discordId: profile.id,
-        avatar,
-        createdAt: new Date().toISOString(),
-      };
-      localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
-      localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
-      setUser(newUser);
+      if (existing) {
+        const updated: DarkVoltUser = { ...existing, discordId: profile.id, avatar: avatar ?? existing.avatar };
+        const newList = users.map((u: any) => u.id === existing!.id ? updated : u);
+        localStorage.setItem(USERS_KEY, JSON.stringify(newList));
+        localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+        setUser(updated);
+      } else {
+        const newUser: DarkVoltUser = {
+          id: 'discord_' + profile.id,
+          username: profile.global_name ?? profile.username,
+          email: profile.email ?? '',
+          role,
+          discordId: profile.id,
+          avatar,
+          createdAt: new Date().toISOString(),
+        };
+        localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
+        localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
+        setUser(newUser);
+      }
+    } catch (error) {
+      console.error('Discord login error:', error);
     }
   };
 
@@ -130,7 +193,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('darkvolt_session');
     setUser(null);
   };
 

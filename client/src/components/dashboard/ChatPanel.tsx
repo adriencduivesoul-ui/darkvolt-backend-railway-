@@ -30,8 +30,8 @@ interface ChatPanelProps {
 
 function RoleLabel({ role }: { role: string }) {
   const { t } = useTranslation();
-  const key = ROLE_LABEL_KEYS[role];
-  return <>{key === 'chat.roleGuest' ? t('chat.roleGuest') : key.toUpperCase()}</>;
+  const key = ROLE_LABEL_KEYS[role] || ROLE_LABEL_KEYS['user']; // Fallback
+  return <>{key === 'chat.roleGuest' ? t('chat.roleGuest') : (key || 'USER').toUpperCase()}</>;
 }
 
 export default function ChatPanel({ compact = false }: ChatPanelProps) {

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+// FORCER RAILWAY EN PRODUCTION - PLUS DE VARIABLES D'ENVIRONNEMENT
+const CHAT_API = 'https://darkvolt-backend-production.up.railway.app';
+
 export interface ChatMessage {
   id: string;
   userId: string;
@@ -55,39 +58,69 @@ export function useChat() {
     return () => clearInterval(t);
   }, [guestCooldown]);
 
-  const sendMessage = useCallback((content: string, replyToId?: string): { success: boolean; error?: string } => {
+  const sendMessage = useCallback(async (content: string, replyToId?: string): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Non connecté' };
     const trimmed = content.trim().slice(0, 300);
     if (!trimmed) return { success: false, error: '' };
 
-    const banned = loadBanned();
-    if (banned.find(b => b.userId === user.id)) {
-      return { success: false, error: 'Tu es banni du chat' };
+    // Vérifications de sécurité
+    if (!user.username || typeof user.username !== 'string') {
+      return { success: false, error: 'Nom d\'utilisateur invalide' };
     }
 
-    if (user.role === 'guest') {
-      if (guestCooldown > 0) {
-        return { success: false, error: `Attends encore ${guestCooldown}s` };
+    try {
+      const token = localStorage.getItem('darkvolt_token');
+      const response = await fetch(`${CHAT_API}/api/chat/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          content: trimmed,
+          username: user.username,
+          userId: user.id,
+          replyToId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        return { success: false, error: error.error || 'Erreur d\'envoi' };
       }
-      setGuestCooldown(30);
+
+      return { success: true };
+    } catch (error) {
+      // Fallback localStorage si API indisponible
+      const banned = loadBanned();
+      if (banned.find(b => b.userId === user.id)) {
+        return { success: false, error: 'Tu es banni du chat' };
+      }
+
+      if (user.role === 'guest') {
+        if (guestCooldown > 0) {
+          return { success: false, error: `Attends encore ${guestCooldown}s` };
+        }
+        setGuestCooldown(30);
+      }
+
+      const replyMsg = replyToId ? loadMsgs().find(m => m.id === replyToId) : undefined;
+      const msg: ChatMessage = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        userId: user.id || 'unknown',
+        username: user.username || 'Anonymous',
+        role: user.role || 'user',
+        content: trimmed,
+        timestamp: Date.now(),
+        replyToId,
+        replyToUsername: replyMsg?.username,
+      };
+
+      const next = [...loadMsgs(), msg];
+      saveMsgs(next);
+      setMessages(next.slice(-MAX_MSGS));
+      return { success: true };
     }
-
-    const replyMsg = replyToId ? loadMsgs().find(m => m.id === replyToId) : undefined;
-    const msg: ChatMessage = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      userId: user.id,
-      username: user.username,
-      role: user.role,
-      content: trimmed,
-      timestamp: Date.now(),
-      replyToId,
-      replyToUsername: replyMsg?.username,
-    };
-
-    const next = [...loadMsgs(), msg];
-    saveMsgs(next);
-    setMessages(next.slice(-MAX_MSGS));
-    return { success: true };
   }, [user, guestCooldown]);
 
   const deleteMessage = useCallback((id: string) => {

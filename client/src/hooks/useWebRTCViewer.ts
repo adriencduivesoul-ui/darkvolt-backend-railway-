@@ -8,7 +8,8 @@ const RTC_CONFIG: RTCConfiguration = {
   ],
 };
 
-export function useWebRTCViewer(userId: string, username: string) {
+export function useWebRTCViewer(userId: string, username: string, streamerId?: string) {
+  console.log('🎥 WebRTC Viewer: Hook initialisé avec streamerId:', streamerId);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connected, setConnected] = useState(false);
   const [hasVideo, setHasVideo] = useState(false);
@@ -18,9 +19,10 @@ export function useWebRTCViewer(userId: string, username: string) {
   const join = useCallback(() => {
     if (joinedRef.current) return;
     console.log('🎥 WebRTC Viewer: Joining stream as', username);
+    console.log('🎥 WebRTC Viewer: Joining streamer:', streamerId);
     joinedRef.current = true;
-    socket.emit('viewer:join', { userId, username });
-  }, [userId, username]);
+    socket.emit('viewer:join', { userId, username, streamerId });
+  }, [userId, username, streamerId]);
 
   const leave = useCallback(() => {
     if (!joinedRef.current) return;

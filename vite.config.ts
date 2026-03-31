@@ -164,7 +164,14 @@ export default defineConfig({
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: '../dist/public',
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`
+      }
+    },
     emptyOutDir: true,
   },
   server: {
@@ -188,5 +195,13 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+  },
+  define: {
+    // Forcer l'URL Railway en production
+    __VITE_API_URL__: JSON.stringify(
+      process.env.NODE_ENV === 'production' 
+        ? 'https://darkvolt-backend-production.up.railway.app'
+        : 'http://localhost:3001'
+    ),
   },
 });

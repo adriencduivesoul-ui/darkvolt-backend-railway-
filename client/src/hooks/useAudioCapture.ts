@@ -1,5 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
 
+// Vérification de la disponibilité de navigator.mediaDevices
+const isMediaDevicesAvailable = () => {
+  return typeof navigator !== 'undefined' && 
+         navigator.mediaDevices && 
+         typeof navigator.mediaDevices.getUserMedia === 'function' && 
+         typeof navigator.mediaDevices.getDisplayMedia === 'function' &&
+         typeof navigator.mediaDevices.enumerateDevices === 'function';
+};
+
 export interface AudioCaptureOptions {
   includeMicrophone: boolean;
   includeSystemAudio: boolean;
@@ -38,6 +47,11 @@ declare global {
 
 // Capture audio système natif avec getDisplayMedia (2024)
 async function captureNativeSystemAudio(): Promise<MediaStream | null> {
+  if (!isMediaDevicesAvailable()) {
+    console.warn('🎛️ navigator.mediaDevices not available');
+    return null;
+  }
+  
   try {
     console.log('🚀 Capture audio système natif...');
     
@@ -165,6 +179,13 @@ export function useAudioCapture() {
   const [audioSources, setAudioSources] = useState<string[]>([]);
 
   const captureAudio = useCallback(async (options: AudioCaptureOptions): Promise<MediaStream> => {
+    if (!isMediaDevicesAvailable()) {
+      const error = '🎛️ navigator.mediaDevices not available - HTTPS required';
+      setError(error);
+      setCapturing(false);
+      throw new Error(error);
+    }
+    
     setError(null);
     setCapturing(true);
     

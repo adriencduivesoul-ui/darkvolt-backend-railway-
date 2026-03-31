@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import socket from '../lib/socket';
-import { useAudioCapture } from './useAudioCapture';
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -19,7 +18,6 @@ export function useWebRTCBroadcaster() {
   const peers = useRef<Map<string, RTCPeerConnection>>(new Map());
   const streamRef = useRef<MediaStream | null>(null);
   const audioMixCtxRef = useRef<AudioContext | null>(null);
-  const { captureAudio, stopAllTracks, audioSources } = useAudioCapture();
 
   // Toggle microphone en temps réel
   const toggleMicrophone = useCallback(() => {
@@ -96,8 +94,10 @@ export function useWebRTCBroadcaster() {
   }, []);
 
   useEffect(() => {
-    const onViewerNew = (viewerSocketId: string) => {
+    const onViewerNew = async (viewerSocketId: string) => {
       console.log('🎥 WebRTC Broadcaster: Received viewer:new event', viewerSocketId, 'broadcasting:', broadcasting);
+      console.log('🎥 WebRTC Broadcaster: Current peers count:', peers.current.size);
+      
       if (broadcasting) {
         console.log('🎥 WebRTC Broadcaster: Making offer to new viewer', viewerSocketId);
         makeOffer(viewerSocketId);
@@ -134,135 +134,67 @@ export function useWebRTCBroadcaster() {
   const startBroadcast = useCallback(async (opts: { video: boolean; audio: boolean; microphone?: boolean; extraAudioDeviceId?: string }) => {
     setError(null);
     try {
-      console.log('🎥 WebRTC Broadcaster: Starting broadcast', opts);
-      
       let stream: MediaStream;
-      
-      if (opts.audio) {
-        // Capturer audio avec micro optionnel + son système (platine DJ)
-        try {
-          const audioStream = await captureAudio({
-            includeMicrophone: opts.microphone !== false, // Par défaut true sauf si explicitement false
-            includeSystemAudio: true
-          });
-          
-          // Capturer la vidéo si demandée
-          if (opts.video) {
-            const videoStream = await navigator.mediaDevices.getUserMedia({
-              audio: false,
-              video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
-            });
-            const videoTracks = videoStream.getVideoTracks();
-            const audioTracks = audioStream.getAudioTracks();
-            stream = new MediaStream([...audioTracks, ...videoTracks]);
-            console.log('🎥 WebRTC Broadcaster: Combined stream ready', {
-              audioTracks: audioTracks.length,
-              videoTracks: videoTracks.length,
-              audioSources: audioSources
-            });
-          } else {
-            stream = audioStream;
-            console.log('🎥 WebRTC Broadcaster: Audio-only stream ready', {
-              audioTracks: audioStream.getAudioTracks().length,
-              audioSources: audioSources
-            });
-          }
-          
-        } catch (audioError) {
-          console.warn('🎥 WebRTC Broadcaster: Audio capture failed, trying fallback...', audioError);
-          
-          // Fallback: seulement le micro
-          const constraints: MediaStreamConstraints = {
-            audio: {
-              autoGainControl: true,
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 44100
-            },
-            video: opts.video ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : false,
-          };
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-          console.log('🎥 WebRTC Broadcaster: Microphone fallback', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled })));
-        }
-      } else {
-        // Pas d'audio, seulement vidéo
-        const constraints: MediaStreamConstraints = {
-          audio: false,
-          video: opts.video ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : false,
-        };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('🎥 WebRTC Broadcaster: Video only stream', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled })));
-      }
-      
-      streamRef.current = stream;
-      
-      // Gérer les pistes audio (microphone activé/désactivé)
-      if (stream && opts.audio) {
-        const audioTracks = stream.getAudioTracks();
-        
-        // Si microphone désactivé, désactiver les pistes micro mais garder le son système
-        if (opts.microphone === false) {
-          audioTracks.forEach(track => {
-            // Garder seulement les pistes qui ne sont pas du micro (son système)
-            if (track.label && (track.label.toLowerCase().includes('microphone') || 
-                               track.label.toLowerCase().includes('mic') ||
-                               track.label.toLowerCase().includes('default'))) {
-              track.enabled = false; // Désactiver le micro
-              console.log('🎙 Microphone track disabled:', track.label);
-            } else {
-              track.enabled = true; // Garder le son système
-              console.log('🎵 System audio track kept:', track.label);
-            }
-          });
-        } else {
-          // Activer toutes les pistes audio
-          audioTracks.forEach(track => {
-            track.enabled = true;
-            console.log('🎵 Audio track enabled:', track.label);
-          });
-        }
-      }
-      // Mélanger une source audio supplémentaire (ex: Stereo Mix, Virtual Cable)
+      const videoConstraints = opts.video
+        ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
+        : false;
+
       if (opts.extraAudioDeviceId) {
+        // ── Mode DJ: source audio sélectionnée directement (line-in, carte son, etc.) ──
+        let audioStream: MediaStream;
         try {
-          const extraStream = await navigator.mediaDevices.getUserMedia({
+          // Tentative avec contraintes optimales (Chrome/Edge)
+          audioStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               deviceId: { exact: opts.extraAudioDeviceId },
               autoGainControl: false,
               echoCancellation: false,
               noiseSuppression: false,
-              sampleRate: 44100
-            }
+              sampleRate: 48000,
+              channelCount: 2,
+            },
+            video: false,
           });
-          audioMixCtxRef.current?.close().catch(() => {});
-          const mixCtx = new AudioContext({ sampleRate: 44100 });
-          audioMixCtxRef.current = mixCtx;
-          const dest = mixCtx.createMediaStreamDestination();
-          if (stream.getAudioTracks().length > 0) {
-            const existingSrc = mixCtx.createMediaStreamSource(new MediaStream(stream.getAudioTracks()));
-            existingSrc.connect(dest);
-          }
-          const extraSrc = mixCtx.createMediaStreamSource(extraStream);
-          extraSrc.connect(dest);
-          stream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-          console.log('🎛️ Source DJ mixée dans le stream:', opts.extraAudioDeviceId);
-        } catch (e) {
-          console.warn('🎛️ Impossible de mixer la source DJ:', e);
+        } catch {
+          // Fallback Firefox : contraintes minimales (juste le deviceId)
+          audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: { deviceId: { exact: opts.extraAudioDeviceId } },
+            video: false,
+          });
         }
+
+        if (opts.video) {
+          const videoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
+          stream = new MediaStream([...audioStream.getAudioTracks(), ...videoStream.getVideoTracks()]);
+        } else {
+          stream = audioStream;
+        }
+        console.log('🎛️ Source DJ capturée directement:', opts.extraAudioDeviceId);
+
+      } else {
+        // ── Mode micro/défaut ──
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: opts.audio
+            ? { autoGainControl: true, echoCancellation: true, noiseSuppression: true, sampleRate: 48000 }
+            : false,
+          video: videoConstraints,
+        });
+        console.log('🎤 Source micro/défaut capturée');
       }
 
+      streamRef.current = stream;
       setLocalStream(stream);
       setVideoEnabled(opts.video);
       setAudioEnabled(opts.audio);
       setBroadcasting(true);
       socket.emit('broadcaster:register', { hasVideo: opts.video });
-      
+
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Accès média refusé';
       console.error('🎥 WebRTC Broadcaster: Error starting broadcast', err);
       setError(msg);
     }
-  }, [captureAudio, audioSources]);
+  }, []);
 
   const stopBroadcast = useCallback(() => {
     audioMixCtxRef.current?.close().catch(() => {});

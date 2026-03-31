@@ -23,7 +23,7 @@ export default function GuestDashboard() {
   const { events: scheduleEvents, isLiveNow } = useSchedule();
   const { profile } = useStreamerProfile();
   const [guestId] = useState(() => 'guest_' + Math.random().toString(36).slice(2));
-  const { remoteStream, hasVideo, join, leave } = useWebRTCViewer(guestId, 'Invité');
+  const { remoteStream, hasVideo, join, leave } = useWebRTCViewer(guestId, 'Invité', status?.streamerId);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [schedFilter, setSchedFilter] = useState<'upcoming' | 'all'>('upcoming');

@@ -19,7 +19,15 @@ const DEFAULT: StreamerProfile = {
   instagram: '', facebook: '', discord: '', twitch: '', soundcloud: '', website: '',
 };
 
-const API = (import.meta.env.VITE_API_URL as string) || '';
+const API = 'https://darkvolt-backend-production.up.railway.app';
+
+const authHeaders = () => {
+  const token = localStorage.getItem('darkvolt_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export function useStreamerProfile() {
   const [profile, setProfile] = useState<StreamerProfile>(DEFAULT);
@@ -27,7 +35,7 @@ export function useStreamerProfile() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/profile`)
+    fetch(`${API}/api/profile`, { headers: authHeaders() })
       .then(r => r.ok ? r.json() : DEFAULT)
       .then(setProfile)
       .catch(() => {});
@@ -42,7 +50,7 @@ export function useStreamerProfile() {
     try {
       const r = await fetch(`${API}/api/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(patch),
       });
       if (r.ok) {

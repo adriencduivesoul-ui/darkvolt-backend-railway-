@@ -44,10 +44,10 @@ export default function StreamerDashboard() {
   const [, navigate] = useLocation();
   const { user, logout } = useAuth();
   const { status, history, goLive, endStream, updateStream, getLiveDuration, formatDuration } = useStreamApi(user?.id);
-  const { messages, bannedUsers, connected: chatConnected, sendMessage, clearChat, unbanUser } = useChatSocket();
+  const { messages, pinnedMsg, bannedUsers, connected: chatConnected, sendMessage, clearChat, unbanUser, deleteMessage, pinMessage, banUser } = useChatSocket() as any;
   const { events: scheduleEvents, addEvent, deleteEvent } = useSchedule();
   const { profile, saving: profileSaving, saved: profileSaved, saveProfile } = useStreamerProfile();
-  const { broadcasting, videoEnabled, audioEnabled, error: rtcError, startBroadcast, stopBroadcast, toggleVideo, toggleAudio } = useWebRTCBroadcaster();
+  const { broadcasting, videoEnabled, audioEnabled, error: rtcError, startBroadcast, stopBroadcast, toggleVideo, toggleAudio, toggleMicrophone, microphoneEnabled } = useWebRTCBroadcaster();
   const [tab, setTab] = useState<Tab>('accueil');
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -57,11 +57,53 @@ export default function StreamerDashboard() {
   const [genre, setGenre] = useState(GENRES[0]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [extraAudioDevice, setExtraAudioDevice] = useState('');
+  const [micPermission, setMicPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const sysAudioStreamRef = useRef<MediaStream | null>(null);
+  const [sysAudioStatus, setSysAudioStatus] = useState<'idle' | 'pending' | 'ready' | 'error'>('idle');
 
-  const refreshAudioDevices = useCallback(() => {
-    navigator.mediaDevices.enumerateDevices()
-      .then(devs => setAudioDevices(devs.filter(d => d.kind === 'audioinput')))
-      .catch(() => {});
+  const refreshAudioDevices = useCallback(async () => {
+    try {
+      // Demande permission micro pour débloquer les labels ET les devices virtuels
+      const tmp = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      tmp.getTracks().forEach(t => t.stop());
+      setMicPermission('granted');
+    } catch {
+      setMicPermission('denied');
+    }
+    try {
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      setAudioDevices(devs.filter(d => d.kind === 'audioinput'));
+    } catch {}
+  }, []);
+
+  const activateSysAudio = useCallback(async () => {
+    sysAudioStreamRef.current?.getTracks().forEach(t => t.stop());
+    sysAudioStreamRef.current = null;
+    setSysAudioStatus('pending');
+    try {
+      let stream: MediaStream;
+      try {
+        stream = await (navigator.mediaDevices as any).getDisplayMedia({
+          audio: { suppressLocalAudioPlayback: false, echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+          video: false,
+        });
+      } catch {
+        stream = await (navigator.mediaDevices as any).getDisplayMedia({
+          audio: { suppressLocalAudioPlayback: false, echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+          video: true,
+        });
+        stream.getVideoTracks().forEach(t => t.stop());
+      }
+      if (!stream.getAudioTracks().length) throw new Error('no audio');
+      stream.getAudioTracks().forEach(t => t.addEventListener('ended', () => {
+        sysAudioStreamRef.current = null;
+        setSysAudioStatus('idle');
+      }));
+      sysAudioStreamRef.current = stream;
+      setSysAudioStatus('ready');
+    } catch {
+      setSysAudioStatus('error');
+    }
   }, []);
 
   useEffect(() => {
@@ -113,10 +155,15 @@ export default function StreamerDashboard() {
     let cancelled = false;
     (async () => {
       try {
+        let stream: MediaStream;
+        if (extraAudioDevice === 'system:audio') {
+          // Pas de preview VU pour son système (getDisplayMedia serait intrusif à chaque tab switch)
+          return;
+        }
         const constraints: MediaStreamConstraints = extraAudioDevice
           ? { audio: { deviceId: { exact: extraAudioDevice } }, video: false }
           : { audio: true, video: false };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         vuStreamRef.current = stream;
         const ctx = new AudioContext();
@@ -153,11 +200,18 @@ export default function StreamerDashboard() {
     };
   }, [tab, extraAudioDevice]);
 
-  const handleStartBroadcast = useCallback(() => {
+  const handleStartBroadcast = useCallback(async () => {
     if (!title.trim()) { alert(t('streamerDash.noTitle')); return; }
-    goLive({ title: title.trim(), description: desc.trim(), genre, streamerName: user?.username || 'Anonymous' });
-    startBroadcast({ video: true, audio: true, microphone: true, extraAudioDeviceId: extraAudioDevice });
-  }, [title, desc, genre, user?.username, goLive, startBroadcast, extraAudioDevice, t]);
+    // startBroadcast d'abord — si ça échoue (false), on n'enregistre pas en DB
+    if (extraAudioDevice === 'system:audio' && sysAudioStatus !== 'ready') {
+      alert('Le son système n\'est pas capturé. Sélectionne "Son Système" dans le dropdown et attends la confirmation ✅.');
+      return;
+    }
+    const ok = await startBroadcast({ video: true, audio: true, microphone: extraAudioDevice !== 'system:audio', extraAudioDeviceId: extraAudioDevice, preAuthorizedSysStream: sysAudioStreamRef.current ?? undefined });
+    if (ok) {
+      await goLive({ title: title.trim(), description: desc.trim(), genre, streamerName: user?.username || 'Anonymous' });
+    }
+  }, [title, desc, genre, user?.username, goLive, startBroadcast, extraAudioDevice, sysAudioStatus, t]);
 
   const handleStopBroadcast = useCallback(() => {
     endStream(); stopBroadcast();
@@ -183,11 +237,17 @@ export default function StreamerDashboard() {
   const [profForm, setProfForm] = useState({ bio: profile.bio, avatar: profile.avatar, instagram: profile.instagram, facebook: profile.facebook, discord: profile.discord, twitch: profile.twitch, soundcloud: profile.soundcloud, website: profile.website });
   const saveProf = useCallback(() => saveProfile(profForm), [profForm, saveProfile]);
 
-  const liveDuration = status?.isLive ? Number(getLiveDuration()) : 0;
-  const viewerHistory = status?.isLive ? Array.from({ length: Math.min(20, Math.floor(liveDuration / 30)) }, (_, i) => ({
-    time: new Date(Date.now() - (20 - i) * 30000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-    viewers: Math.max(1, (status.viewers || 0) + Math.floor(Math.random() * 10 - 5))
-  })) : [];
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!status?.isLive) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [status?.isLive]);
+  const liveDuration = status?.isLive && status?.startedAt ? Date.now() - status.startedAt : 0;
+  const viewerHistory = history.slice(0, 10).reverse().map((s: StreamRecord) => ({
+    time: new Date(s.startedAt).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
+    viewers: s.peakViewers || 0,
+  }));
   const totalHours = history.reduce((acc: number, s: StreamRecord) => acc + (s.duration / 3600), 0);
   const peakAbsolute = history.reduce((acc: number, s: StreamRecord) => Math.max(acc, s.peakViewers || 0), 0);
 
@@ -273,7 +333,7 @@ export default function StreamerDashboard() {
                     <span className="font-orbitron" style={{ fontSize: '14px', color: R, fontWeight: 700 }}>{formatDuration(liveDuration)}</span>
                   </div>
                 </div>
-                <button onClick={() => navigate('/dashboard')} className="font-orbitron transition-all w-full"
+                <button onClick={() => navigate('/live')} className="font-orbitron transition-all w-full"
                   style={{ padding: '14px', fontSize: '11px', letterSpacing: '0.25em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '8px', background: `${G}18`, border: `1px solid ${G}44`, color: G, boxShadow: `0 0 15px ${G}22` }}
                   onMouseEnter={e => (e.currentTarget.style.background = `${G}28`)}
                   onMouseLeave={e => (e.currentTarget.style.background = `${G}18`)}>
@@ -353,10 +413,10 @@ export default function StreamerDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Camera preview bento */}
-                <BentoCard title="PREVIEW CAM" style={{ flex: '1 1 0', overflow: 'hidden', minHeight: 0 }}>
-                  <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <BentoCard title="PREVIEW CAM" style={{ flexShrink: 0 }}>
+                  <div style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', background: '#000', overflow: 'hidden' }}>
                     <video ref={previewVideoRef} autoPlay muted playsInline
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     {broadcasting && (
                       <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(0,0,0,0.7)', padding: '4px 8px', borderRadius: '4px', border: `1px solid ${R}44` }}>
                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: R, boxShadow: `0 0 6px ${R}` }} />
@@ -378,15 +438,74 @@ export default function StreamerDashboard() {
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                       {/* Source select */}
                       <div style={{ flex: 1 }}>
-                        <label className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.2em', color: `${G}88`, display: 'block', marginBottom: '5px' }}>{t('streamerDash.djSource')}</label>
-                        <select value={extraAudioDevice} onChange={e => setExtraAudioDevice(e.target.value)} style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                          <label className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.2em', color: `${G}88` }}>{t('streamerDash.djSource')}</label>
+                          <button onClick={refreshAudioDevices} title="Rafraîchir les sources audio" className="font-orbitron transition-all"
+                            style={{ fontSize: '7px', letterSpacing: '0.1em', padding: '2px 7px', background: `${G}0d`, border: `1px solid ${G}22`, color: `${G}88`, cursor: 'pointer', borderRadius: '4px' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = G; (e.currentTarget as HTMLButtonElement).style.borderColor = `${G}55`; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = `${G}88`; (e.currentTarget as HTMLButtonElement).style.borderColor = `${G}22`; }}>
+                            ↻ SCAN
+                          </button>
+                        </div>
+                        <select value={extraAudioDevice} onChange={e => {
+                          const val = e.target.value;
+                          if (val !== 'system:audio') {
+                            sysAudioStreamRef.current?.getTracks().forEach(t => t.stop());
+                            sysAudioStreamRef.current = null;
+                            setSysAudioStatus('idle');
+                          }
+                          setExtraAudioDevice(val);
+                          if (val === 'system:audio') activateSysAudio();
+                        }} style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}>
                           <option value="">{t('streamerDash.noSource')}</option>
-                          {audioDevices.map(d => (
-                            <option key={d.deviceId} value={d.deviceId} style={{ background: '#080808' }}>
-                              {d.label || `Device (${d.deviceId.slice(0, 6)}…)`}
-                            </option>
-                          ))}
+                          <option value="system:audio" style={{ background: '#080808', color: G }}>🖥️ Son Système (Boom Audio / djay Pro)</option>
+                          {audioDevices.map(d => {
+                            const lbl = d.label.toLowerCase();
+                            const isVirtual = lbl.includes('stereo mix') || lbl.includes('loopback') || lbl.includes('boom') || lbl.includes('voicemeeter') || lbl.includes('cable') || lbl.includes('virtual') || lbl.includes('what u hear');
+                            return (
+                              <option key={d.deviceId} value={d.deviceId} style={{ background: '#080808', color: isVirtual ? '#39FF14' : '#e8e8e8' }}>
+                                {isVirtual ? '🔊 ' : ''}{d.label || `Device (${d.deviceId.slice(0, 6)}…)`}
+                              </option>
+                            );
+                          })}
                         </select>
+                        {/* Permission indicator — inside source div, not a flex sibling */}
+                        {micPermission === 'denied' && (
+                          <p className="font-space" style={{ fontSize: '9px', color: R, marginTop: '4px', lineHeight: 1.4 }}>
+                            ⚠️ Permission micro refusée — Boom 3D invisible. Autorise le micro dans le navigateur puis SCAN.
+                          </p>
+                        )}
+                        {micPermission === 'granted' && audioDevices.length === 0 && (
+                          <p className="font-space" style={{ fontSize: '9px', color: `${G}88`, marginTop: '4px' }}>Aucun device audio détecté</p>
+                        )}
+                        {micPermission !== 'denied' && extraAudioDevice !== 'system:audio' && (
+                          <p className="font-space" style={{ fontSize: '8px', color: '#e8e8e833', marginTop: '4px', lineHeight: 1.4 }}>
+                            DJ virtuel sans platine : activer «Stereo Mix» dans Windows → Son → Enregistrement.
+                          </p>
+                        )}
+                        {extraAudioDevice === 'system:audio' && (
+                          <div style={{ marginTop: '6px' }}>
+                            {sysAudioStatus === 'pending' && (
+                              <p className="font-space" style={{ fontSize: '9px', color: `${G}99`, lineHeight: 1.4 }}>⏳ Boîte Chrome ouverte — cocher le son du système puis cliquer Partager.</p>
+                            )}
+                            {sysAudioStatus === 'ready' && (
+                              <p className="font-space" style={{ fontSize: '9px', color: G, lineHeight: 1.4 }}>✅ Son système capturé — prêt à streamer.</p>
+                            )}
+                            {(sysAudioStatus === 'error' || sysAudioStatus === 'idle') && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <p className="font-space" style={{ fontSize: '9px', color: sysAudioStatus === 'error' ? R : '#e8e8e855', lineHeight: 1.4 }}>
+                                  {sysAudioStatus === 'error' ? '⚠️ Accès refusé.' : '🔇 Son système non actif.'}
+                                </p>
+                                <button onClick={activateSysAudio} className="font-orbitron"
+                                  style={{ fontSize: '7px', padding: '2px 7px', background: `${G}0d`, border: `1px solid ${G}22`, color: `${G}88`, cursor: 'pointer', borderRadius: '4px' }}
+                                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = G; }}
+                                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = `${G}88`; }}>
+                                  ↻ Activer
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {/* VU meters L/R */}
                       <div style={{ display: 'flex', gap: '5px', alignItems: 'flex-end', paddingTop: '16px' }}>
@@ -456,18 +575,27 @@ export default function StreamerDashboard() {
                       {broadcasting ? `⏹ ${t('streamerDash.endStream')}` : `▶ ${t('streamerDash.goLive')}`}
                     </button>
 
-                    {/* VID / AUDIO toggles when live */}
+                    {/* VID / AUDIO / MIC toggles when live */}
                     {broadcasting && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                         {[
                           { label: t('streamerDash.videoLabel'), active: videoEnabled, fn: toggleVideo },
                           { label: t('streamerDash.audioLabel'), active: audioEnabled, fn: toggleAudio },
+                          { label: '🎙 MIC', active: microphoneEnabled, fn: toggleMicrophone },
                         ].map(({ label, active, fn }) => (
                           <button key={label} onClick={fn} className="font-orbitron transition-all"
-                            style={{ padding: '8px', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '6px', border: `1px solid ${active ? G : '#e8e8e815'}`, color: active ? G : '#e8e8e830', background: active ? `${G}0d` : 'transparent' }}>
-                            {label}: {active ? 'ON' : 'OFF'}
+                            style={{ padding: '8px', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '6px', border: `1px solid ${active ? G : R}`, color: active ? G : R, background: active ? `${G}0d` : `${R}0d` }}>
+                            {label}: {active ? 'ON' : 'MUTE'}
                           </button>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Error display */}
+                    {rtcError && (
+                      <div style={{ background: `${R}0d`, border: `1px solid ${R}55`, borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', flexShrink: 0 }}>⚠️</span>
+                        <p className="font-space" style={{ fontSize: '11px', color: R, lineHeight: 1.5, margin: 0 }}>{rtcError}</p>
                       </div>
                     )}
 
@@ -503,7 +631,7 @@ export default function StreamerDashboard() {
               {/* ── Chat col ── */}
               <BentoCard title={t('streamerDash.chatLiveLabel')} dot={chatConnected ? G : R} style={{ overflow: 'hidden', minHeight: 0 }}>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
-                  {messages.slice(-80).map((m, i) => (
+                  {messages.slice(-80).map((m: any, i: number) => (
                     <div key={i} style={{ padding: '4px 6px', borderRadius: '4px', background: m.role === 'streamer' ? `${G}0a` : 'transparent', borderLeft: m.role === 'streamer' ? `2px solid ${G}66` : '2px solid transparent' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '4px', marginBottom: '1px' }}>
                         <span className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.1em', color: m.role === 'streamer' ? G : '#e8e8e8aa', flexShrink: 0 }}>{m.username}</span>
@@ -554,11 +682,19 @@ export default function StreamerDashboard() {
                       </button>
                     </div>
                     <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {messages.slice(-50).map((m, i) => (
+                      {messages.slice(-50).map((m: any, i: number) => (
                         <div key={i} style={{ background: '#08080888', border: `1px solid ${G}0d`, borderRadius: '6px', padding: '8px 12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                            <span className="font-orbitron" style={{ fontSize: '10px', color: (m.role as string) === 'streamer' ? G : '#e8e8e8cc' }}>{m.username}</span>
-                            <span className="font-space" style={{ fontSize: '10px', color: `${G}44` }}>{new Date(m.timestamp).toLocaleTimeString()}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', gap: '8px' }}>
+                            <span className="font-orbitron" style={{ fontSize: '10px', color: m.role === 'streamer' ? G : '#e8e8e8cc', flexShrink: 0 }}>{m.username}</span>
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: 'auto' }}>
+                              <span className="font-space" style={{ fontSize: '9px', color: `${G}33` }}>{new Date(m.timestamp).toLocaleTimeString()}</span>
+                              <button onClick={() => pinMessage?.(m.id)} title="└️ Pinned" className="font-orbitron"
+                                style={{ fontSize: '8px', padding: '2px 5px', background: m.pinned ? `${G}22` : 'transparent', border: `1px solid ${G}22`, color: m.pinned ? G : `${G}44`, cursor: 'pointer', borderRadius: '3px' }}>📌</button>
+                              <button onClick={() => banUser?.(m.userId, m.username)} title="Bannir" className="font-orbitron"
+                                style={{ fontSize: '8px', padding: '2px 5px', background: 'transparent', border: `1px solid ${R}22`, color: `${R}44`, cursor: 'pointer', borderRadius: '3px' }}>🚫</button>
+                              <button onClick={() => deleteMessage?.(m.id)} title="Supprimer" className="font-orbitron"
+                                style={{ fontSize: '8px', padding: '2px 5px', background: 'transparent', border: `1px solid ${R}22`, color: `${R}44`, cursor: 'pointer', borderRadius: '3px' }}>✕</button>
+                            </div>
                           </div>
                           <p className="font-space" style={{ fontSize: '12px', color: '#e8e8e8aa' }}>{m.content}</p>
                         </div>
@@ -572,7 +708,7 @@ export default function StreamerDashboard() {
                   <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {bannedUsers.length === 0
                       ? <p className="font-space" style={{ fontSize: '11px', color: '#e8e8e833', textAlign: 'center', padding: '16px' }}>{t('streamerDash.noBanned')}</p>
-                      : bannedUsers.map(u => (
+                      : bannedUsers.map((u: any) => (
                           <div key={u.userId} style={{ background: `${R}08`, border: `1px solid ${R}18`, borderRadius: '6px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span className="font-space" style={{ fontSize: '12px', color: '#e8e8e8aa' }}>{u.username}</span>
                             <button onClick={() => unbanUser(u.userId)} className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.15em', color: G, background: `${G}11`, border: `1px solid ${G}33`, padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
@@ -685,6 +821,7 @@ export default function StreamerDashboard() {
                 <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {[
                     { lbl: t('streamerDash.titleField'), val: schedForm.title, key: 'title', ph: t('streamerDash.eventTitlePh'), type: 'text' },
+                    { lbl: 'Nom DJ', val: schedForm.djName, key: 'djName', ph: 'Nom du DJ', type: 'text' },
                     { lbl: 'Date', val: schedForm.date, key: 'date', ph: '', type: 'date' },
                     { lbl: 'Heure', val: schedForm.startTime, key: 'startTime', ph: '', type: 'time' },
                   ].map(f => (
@@ -700,6 +837,22 @@ export default function StreamerDashboard() {
                     <select value={schedForm.genre} onChange={e => setSchedForm({ ...schedForm, genre: e.target.value })} style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}>
                       {GENRES.map(g => <option key={g} value={g} style={{ background: '#080808' }}>{g}</option>)}
                     </select>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.2em', color: `${G}88`, display: 'block', marginBottom: '4px' }}>Durée (min)</label>
+                      <input type="number" value={schedForm.duration} min={15} max={480}
+                        onChange={e => setSchedForm({ ...schedForm, duration: Number(e.target.value) })}
+                        className={inputCls} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.2em', color: `${G}88`, display: 'block', marginBottom: '4px' }}>Récurrent</label>
+                      <select value={schedForm.recurring || ''} onChange={e => setSchedForm({ ...schedForm, recurring: (e.target.value || null) as any })} style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}>
+                        <option value="" style={{ background: '#080808' }}>Non</option>
+                        <option value="weekly" style={{ background: '#080808' }}>Hebdomadaire</option>
+                        <option value="monthly" style={{ background: '#080808' }}>Mensuel</option>
+                      </select>
+                    </div>
                   </div>
                   <button onClick={submitSched} className="font-orbitron transition-all w-full"
                     style={{ padding: '10px', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '6px', background: `${G}18`, border: `1px solid ${G}44`, color: G }}>
@@ -747,8 +900,12 @@ export default function StreamerDashboard() {
                 <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {[
                     { lbl: 'Bio', val: profForm.bio, key: 'bio', ph: t('streamerDash.bioPh') },
-                    { lbl: t('streamerDash.instagramLabel'), val: profForm.instagram, key: 'instagram', ph: '@username' },
-                    { lbl: t('streamerDash.twitchLabel'), val: profForm.twitch, key: 'twitch', ph: 'channel_name' },
+                    { lbl: 'Instagram', val: profForm.instagram, key: 'instagram', ph: '@username' },
+                    { lbl: 'Facebook', val: profForm.facebook, key: 'facebook', ph: 'Page ou profil' },
+                    { lbl: 'Discord', val: profForm.discord, key: 'discord', ph: 'username#0000 ou lien invite' },
+                    { lbl: 'Twitch', val: profForm.twitch, key: 'twitch', ph: 'channel_name' },
+                    { lbl: 'SoundCloud', val: profForm.soundcloud, key: 'soundcloud', ph: 'soundcloud.com/...' },
+                    { lbl: 'Site web', val: profForm.website, key: 'website', ph: 'https://...' },
                   ].map(f => (
                     <div key={f.key}>
                       <label className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.2em', color: `${G}88`, display: 'block', marginBottom: '4px' }}>{f.lbl}</label>

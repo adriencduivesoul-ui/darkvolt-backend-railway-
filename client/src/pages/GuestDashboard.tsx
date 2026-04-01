@@ -35,11 +35,11 @@ export default function GuestDashboard() {
   }, [remoteStream]);
 
   useEffect(() => {
-    if (status.isLive) {
+    if (status.isLive && status.streamerId) {
       join();
       return () => leave();
     }
-  }, [status.isLive, join, leave]);
+  }, [status.isLive, status.streamerId, join, leave]);
 
   const filteredSchedule = () => {
     const now = new Date();

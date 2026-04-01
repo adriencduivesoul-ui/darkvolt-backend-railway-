@@ -21,7 +21,7 @@ export interface BannedUser {
   bannedAt: number;
 }
 
-const API = (import.meta.env.VITE_API_URL as string) || '';
+const API = 'https://darkvolt-backend-production.up.railway.app';
 
 export function useChatSocket() {
   const { user } = useAuth();
@@ -34,7 +34,7 @@ export function useChatSocket() {
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const socket = io(API || window.location.origin, { transports: ['websocket', 'polling'] });
+    const socket = io(API, { transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 
     socket.on('connect',    () => setConnected(true));

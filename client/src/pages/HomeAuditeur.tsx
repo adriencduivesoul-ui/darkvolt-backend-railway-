@@ -1,286 +1,166 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useStreamApi } from '../hooks/useStreamApi';
 import { useStreamerProfile } from '../hooks/useStreamerProfile';
+import { useChatSocket } from '../hooks/useChatSocket';
 import { useAuth } from '../contexts/AuthContext';
-import LiveStreamPage from './LiveStream';
-
-// FORCER L'INCLUSION DU HOOK DANS LE BUILD
-console.log('🔧 Hook useStreamApi chargé:', typeof useStreamApi);
 
 const G = '#39FF14';
 const R = '#FF1A1A';
-const CLIP = (s = 14) => `polygon(0 0, calc(100% - ${s}px) 0, 100% ${s}px, 100% 100%, ${s}px 100%, 0 calc(100% - ${s}px))`;
 
-interface StreamerLive {
-  id: string;
-  username: string;
-  title: string;
-  genre: string;
-  viewers: number;
-  avatar?: string;
-  isLive: boolean;
+function BentoCard({ title, dot = G, children, style = {} }: { title: string; dot?: string; children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{ background: 'rgba(0,0,0,0.45)', border: `1px solid ${G}18`, borderRadius: '10px', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', ...style }}>
+      <div style={{ padding: '10px 14px 8px', borderBottom: `1px solid ${G}10`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: dot, boxShadow: `0 0 6px ${dot}` }} />
+        <span className="font-orbitron" style={{ fontSize: '9px', letterSpacing: '0.3em', color: G, textTransform: 'uppercase' }}>{title}</span>
+      </div>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>{children}</div>
+    </div>
+  );
 }
 
 interface HomeAuditeurProps {
-  onStreamerSelect?: (streamer: StreamerLive) => void;
+  onStreamerSelect?: (streamer: { id: string; username: string; title: string; genre: string; viewers: number; isLive: boolean }) => void;
 }
 
 export default function HomeAuditeur({ onStreamerSelect }: HomeAuditeurProps = {}) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { status } = useStreamApi();
-  const { profile } = useStreamerProfile();
-  const [joiningStreamer, setJoiningStreamer] = useState<string | null>(null);
+  const { status, getLiveDuration } = useStreamApi();
+  const { profile: _profile } = useStreamerProfile();
+  const { messages, connected: chatConnected, sendMessage } = useChatSocket();
+  const [joining, setJoining] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Utiliser les vraies données de streamers
-  const [streamers, setStreamers] = useState<StreamerLive[]>([]);
-  const [allGenres, setAllGenres] = useState<string[]>([]);
-  const [selectedGenre, setSelectedGenre] = useState<string>('TOUS');
-
-  // Afficher uniquement le streamer live actuel (s'il y en a un)
+  const [, setTick] = useState(0);
   useEffect(() => {
-    console.log('🔍 HomeAuditeur: useEffect appelé');
-    console.log('🔍 Status actuel:', status);
-    
-    const liveStreamers: StreamerLive[] = [];
-    
-    // Ajouter le streamer actuel seulement s'il est vraiment live
-    if (status.isLive && status.streamerName) {
-      console.log('✅ Streamer live détecté:', status.streamerName);
-      liveStreamers.push({
-        id: 'current-live',
-        username: status.streamerName,
-        title: status.title || 'Live Stream',
-        genre: status.genre || profile?.genres?.[0] || 'Live',
-        viewers: status.viewers,
-        avatar: profile?.avatar,
-        isLive: true
-      });
-    } else {
-      console.log('❌ Aucun streamer live détecté');
-      console.log('🔍 status.isLive:', status.isLive);
-      console.log('🔍 status.streamerName:', status.streamerName);
-    }
-    
-    console.log('🔍 Streamers live à afficher:', liveStreamers);
-    setStreamers(liveStreamers);
-    
-    // Extraire les genres uniques pour les filtres
-    const genres = new Set<string>();
-    liveStreamers.forEach(streamer => {
-      if (streamer.genre) {
-        // Diviser les genres multiples par virgule
-        const genreList = streamer.genre.split(',').map(g => g.trim()).filter(g => g);
-        genreList.forEach(g => genres.add(g));
-      }
-    });
-    setAllGenres(['TOUS', ...Array.from(genres)]);
-  }, [status, profile]);
+    if (!status.isLive) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [status.isLive]);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const sendChat = useCallback(() => {
+    if (!chatInput.trim()) return;
+    sendMessage(chatInput.trim());
+    setChatInput('');
+  }, [chatInput, sendMessage]);
+
+  const handleJoin = () => {
+    setJoining(true);
+    onStreamerSelect?.({ id: 'current-live', username: status.streamerName, title: status.title, genre: status.genre, viewers: status.viewers, isLive: true });
+    setTimeout(() => setJoining(false), 800);
+  };
 
   return (
-    <div className="p-6" style={{ color: '#e8e8e8' }}>
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="text-center mb-8">
-          <h1 className="font-orbitron text-4xl font-black mb-4" style={{ color: G }}>
-            DARKVOLT LIVE
-          </h1>
-          <p className="font-space text-lg" style={{ color: '#e8e8e866' }}>
-            Découvrez les meilleurs streamers DJ en direct
-          </p>
-        </div>
+    <div style={{ minHeight: '100vh', background: '#050505', color: '#e8e8e8', display: 'flex', flexDirection: 'column' }}>
+      <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)' }} />
 
-        {/* Stats en direct */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="p-4 text-center" style={{ background: `${G}03`, border: `1px solid ${G}12`, clipPath: CLIP(8) }}>
-            <div className="font-orbitron text-2xl font-black" style={{ color: G }}>
-              {status.isLive ? '1' : '0'}
-            </div>
-            <div className="font-space text-xs" style={{ color: '#e8e8e866' }}>STREAMER LIVE</div>
-          </div>
-          <div className="p-4 text-center" style={{ background: `${R}03`, border: `1px solid ${R}12`, clipPath: CLIP(8) }}>
-            <div className="font-orbitron text-2xl font-black" style={{ color: R }}>
-              {status.viewers}
-            </div>
-            <div className="font-space text-xs" style={{ color: '#e8e8e866' }}>AUDITEURS CONNECTÉS</div>
-          </div>
-          <div className="p-4 text-center" style={{ background: '#0a0a0a', border: `1px solid ${G}12`, clipPath: CLIP(8) }}>
-            <div className="font-orbitron text-2xl font-black" style={{ color: G }}>
-              {status.isLive ? '🔴 LIVE' : '⚫ OFF'}
-            </div>
-            <div className="font-space text-xs" style={{ color: '#e8e8e866' }}>STATUS</div>
-          </div>
-        </div>
+      {/* ── Main ── */}
+      <div className="relative z-10" style={{ flex: 1, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-        {/* Filtres */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2 flex-wrap">
-            {allGenres.map(genre => (
-              <button 
-                key={genre}
-                onClick={() => setSelectedGenre(genre)}
-                className="px-4 py-2 font-orbitron text-xs"
-                style={{ 
-                  background: selectedGenre === genre ? G : 'transparent', 
-                  color: selectedGenre === genre ? '#050505' : `${G}66`, 
-                  border: `1px solid ${G}22`, 
-                  clipPath: CLIP(6) 
-                }}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
-          <div className="font-orbitron text-xs" style={{ color: `${G}66` }}>
-            {status.isLive ? '1 STREAMER EN DIRECT' : 'AUCUN STREAMER EN DIRECT'}
-          </div>
-        </div>
+        {status.isLive ? (
+          /* ═══ STREAM EN COURS ═══ */
+          <>
+            {/* Stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', flexShrink: 0 }}>
+              {[
+                { label: 'AUDITEURS', value: String(status.viewers || 0), dot: R },
+                { label: 'DURÉE', value: getLiveDuration(), dot: G },
+                { label: 'GENRE', value: status.genre || '—', dot: G },
+              ].map(({ label, value, dot }) => (
+                <div key={label} style={{ background: 'rgba(0,0,0,0.45)', border: `1px solid ${dot}18`, borderRadius: '8px', padding: '12px 16px', backdropFilter: 'blur(10px)' }}>
+                  <p className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.3em', color: `${dot}66`, marginBottom: '4px' }}>{label}</p>
+                  <p className="font-orbitron" style={{ fontSize: '18px', fontWeight: 700, color: dot, textShadow: `0 0 12px ${dot}44` }}>{value}</p>
+                </div>
+              ))}
+            </div>
 
-        {/* Liste des streamers */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {streamers
-            .filter(streamer => {
-              // TOUJOURS afficher le streamer live, peu importe le genre sélectionné
-              if (streamer.isLive) return true;
-              
-              if (selectedGenre === 'TOUS') return true;
-              // Filtrer par genre (supporte les genres multiples)
-              const streamerGenres = streamer.genre ? streamer.genre.split(',').map(g => g.trim()) : [];
-              return streamerGenres.includes(selectedGenre);
-            })
-            .map(streamer => (
-            <div
-              key={streamer.id}
-              onClick={() => {
-                setJoiningStreamer(streamer.id);
-                onStreamerSelect?.(streamer);
-                setTimeout(() => setJoiningStreamer(null), 2000);
-              }}
-              className={`group cursor-pointer transition-all duration-300 ${joiningStreamer === streamer.id ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ 
-                background: 'rgba(255,255,255,0.02)', 
-                border: `1px solid ${G}08`,
-                clipPath: CLIP(10),
-                overflow: 'hidden'
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = `${G}33`;
-                (e.currentTarget as HTMLDivElement).style.background = `${G}04`;
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = `${G}08`;
-                (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.02)';
-              }}
-            >
-              {/* Preview vidéo (placeholder) */}
-              <div className="relative" style={{ aspectRatio: '16/9', background: '#000' }}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span style={{ fontSize: '3rem', opacity: 0.3 }}>🎵</span>
-                </div>
-                
-                {/* Badge LIVE */}
-                <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1" style={{ background: 'rgba(255,26,26,0.85)', clipPath: CLIP(4) }}>
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#fff', animation: 'live-dot 1s ease-in-out infinite' }} />
-                  <span className="font-orbitron text-[9px] tracking-[0.15em]" style={{ color: '#fff' }}>LIVE</span>
-                </div>
-                
-                {/* Viewers */}
-                <div className="absolute bottom-3 right-3 font-orbitron text-[9px] px-2 py-1" style={{ background: 'rgba(0,0,0,0.7)', color: `${G}88` }}>
-                  👁 {streamer.viewers}
-                </div>
-                
-                {/* Genre */}
-                <div className="absolute top-3 right-3 font-orbitron text-[9px] px-2 py-1" style={{ background: `${G}12`, color: G, clipPath: CLIP(4) }}>
-                  {streamer.genre}
-                </div>
-              </div>
-              
-              {/* Infos streamer */}
-              <div className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  {/* Avatar */}
-                  <div className="w-12 h-12 flex items-center justify-center" style={{ background: `${G}08`, border: `1px solid ${G}22`, clipPath: CLIP(6) }}>
-                    <span style={{ fontSize: '1.5rem' }}>🎧</span>
+            {/* Main content: stream info + chat */}
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 300px', gap: '12px', minHeight: 0 }}>
+
+              {/* Stream card */}
+              <BentoCard title="STREAM EN DIRECT" dot={R} style={{ minHeight: 0 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: '24px' }}>
+                  {/* Live pulse */}
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: `${R}10`, border: `2px solid ${R}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 60px ${R}22, inset 0 0 30px ${R}08`, animation: 'live-glow 2s ease-in-out infinite' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: R, boxShadow: `0 0 20px ${R}` }} />
+                    </div>
+                    <div style={{ position: 'absolute', inset: '-8px', borderRadius: '50%', border: `1px solid ${R}22`, animation: 'live-ring 2s ease-in-out infinite' }} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-orbitron font-bold text-sm" style={{ color: '#e8e8e8' }}>
-                      {streamer.username}
-                    </h3>
-                    <p className="font-space text-xs" style={{ color: '#e8e8e866' }}>
-                      DJ Streamer
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Titre du stream */}
-                <h4 className="font-orbitron font-bold text-sm mb-2" style={{ color: G }}>
-                  {streamer.title}
-                </h4>
-                
-                {/* Bouton rejoindre */}
-                <button 
-                  className="w-full font-orbitron text-xs tracking-[0.2em] uppercase py-3 transition-all duration-200"
-                  style={{ 
-                    background: joiningStreamer === streamer.id ? `${G}12` : 'transparent', 
-                    border: `1px solid ${G}33`, 
-                    color: joiningStreamer === streamer.id ? '#050505' : G, 
-                    cursor: joiningStreamer === streamer.id ? 'default' : 'pointer',
-                    clipPath: CLIP(6)
-                  }}
-                  onMouseEnter={e => {
-                    if (joiningStreamer !== streamer.id) {
-                      (e.currentTarget as HTMLButtonElement).style.background = G;
-                      (e.currentTarget as HTMLButtonElement).style.color = '#050505';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (joiningStreamer !== streamer.id) {
-                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                      (e.currentTarget as HTMLButtonElement).style.color = G;
-                    }
-                  }}
-                >
-                  {joiningStreamer === streamer.id ? 'CONNEXION...' : 'REJOINDRE LE LIVE →'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
 
-        {/* Section "Pas de streamers" */}
-        {streamers.filter(streamer => {
-          if (selectedGenre === 'TOUS') return true;
-          const streamerGenres = streamer.genre ? streamer.genre.split(',').map(g => g.trim()) : [];
-          return streamerGenres.includes(selectedGenre);
-        }).length === 0 && (
-          <div className="text-center py-16">
-            <span style={{ fontSize: '4rem', opacity: 0.3 }}>🎭</span>
-            <h3 className="font-orbitron text-xl font-bold mb-4" style={{ color: '#e8e8e866' }}>
-              {!status.isLive 
-                ? 'Aucun streamer live pour le moment' 
-                : `Aucun streamer ${selectedGenre.toLowerCase()} en direct`
-              }
-            </h3>
-            <p className="font-space text-sm" style={{ color: '#e8e8e833' }}>
-              {!status.isLive 
-                ? 'Revenez plus tard ou devenez streamer vous-même !'
-                : `Essayez un autre genre ou revenez plus tard !`
-              }
-            </p>
+                  {/* Stream info */}
+                  <div style={{ textAlign: 'center', maxWidth: '480px' }}>
+                    <p className="font-orbitron" style={{ fontSize: '9px', letterSpacing: '0.3em', color: `${R}88`, marginBottom: '8px' }}>🔴 LIVE — {status.streamerName}</p>
+                    <h2 className="font-orbitron" style={{ fontSize: 'clamp(16px, 3vw, 26px)', fontWeight: 900, color: '#ffffff', letterSpacing: '0.05em', marginBottom: '8px', lineHeight: 1.2 }}>{status.title || 'DARKVOLT LIVE'}</h2>
+                    {status.genre && <p className="font-space" style={{ fontSize: '12px', color: `${G}88`, marginBottom: '4px' }}>{status.genre}</p>}
+                  </div>
+
+                  {/* Join button */}
+                  <button onClick={handleJoin} disabled={joining} className="font-orbitron transition-all"
+                    style={{ padding: '16px 48px', fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', cursor: joining ? 'default' : 'pointer', borderRadius: '8px', background: joining ? `${G}22` : `${G}18`, border: `1px solid ${G}55`, color: G, boxShadow: `0 0 24px ${G}22`, opacity: joining ? 0.6 : 1 }}
+                    onMouseEnter={e => { if (!joining) (e.currentTarget as HTMLButtonElement).style.background = `${G}2a`; }}
+                    onMouseLeave={e => { if (!joining) (e.currentTarget as HTMLButtonElement).style.background = `${G}18`; }}>
+                    {joining ? 'CONNEXION...' : '▶ REJOINDRE LE LIVE'}
+                  </button>
+                </div>
+              </BentoCard>
+
+              {/* Chat panel */}
+              <BentoCard title="CHAT EN DIRECT" dot={chatConnected ? G : R} style={{ minHeight: 0 }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {messages.slice(-60).map((m, i) => (
+                    <div key={i} style={{ padding: '4px 6px', borderRadius: '4px', background: m.role === 'streamer' ? `${G}0a` : 'transparent', borderLeft: m.role === 'streamer' ? `2px solid ${G}66` : '2px solid transparent' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px', marginBottom: '1px' }}>
+                        <span className="font-orbitron" style={{ fontSize: '8px', letterSpacing: '0.1em', color: m.role === 'streamer' ? G : '#e8e8e8aa', flexShrink: 0 }}>{m.username}</span>
+                        <span className="font-space" style={{ fontSize: '8px', color: '#e8e8e822', flexShrink: 0 }}>{new Date(m.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <p className="font-space" style={{ fontSize: '11px', color: '#e8e8e8aa', lineHeight: 1.4, wordBreak: 'break-word' }}>{m.content}</p>
+                    </div>
+                  ))}
+                  {messages.length === 0 && <p className="font-space" style={{ fontSize: '11px', color: '#e8e8e822', textAlign: 'center', marginTop: '20px' }}>Aucun message…</p>}
+                  <div ref={chatEndRef} />
+                </div>
+                <div style={{ padding: '8px', borderTop: `1px solid ${G}10`, display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendChat(); }}
+                    placeholder="Message…" className="font-space w-full bg-transparent outline-none"
+                    style={{ flex: 1, fontSize: '11px', padding: '6px 10px', border: `1px solid ${G}20`, borderRadius: '6px', color: '#e8e8e8', background: `${G}03` }} />
+                  <button onClick={sendChat} className="font-orbitron transition-all" style={{ padding: '6px 10px', fontSize: '10px', cursor: 'pointer', borderRadius: '6px', background: `${G}18`, border: `1px solid ${G}44`, color: G, flexShrink: 0 }}>→</button>
+                </div>
+              </BentoCard>
+            </div>
+          </>
+        ) : (
+          /* ═══ AUCUN STREAM ═══ */
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ maxWidth: '420px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+              <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: `${G}0a`, border: `2px solid ${G}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 40px ${G}12` }}>
+                <span style={{ fontSize: '40px', opacity: 0.4 }}>🎧</span>
+              </div>
+              <div>
+                <p className="font-orbitron" style={{ fontSize: '16px', letterSpacing: '0.3em', color: '#e8e8e844', marginBottom: '8px' }}>AUCUN STREAM ACTIF</p>
+                <p className="font-space" style={{ fontSize: '12px', color: '#e8e8e822', lineHeight: 1.6 }}>Aucun DJ en live pour le moment.<br/>Revenez plus tard ou activez les notifications.</p>
+              </div>
+              <div style={{ height: '1px', width: '100%', background: `linear-gradient(90deg, transparent, ${G}22, transparent)` }} />
+              <a href="/live" className="font-orbitron transition-all" style={{ padding: '14px 32px', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '8px', background: `${G}0d`, border: `1px solid ${G}33`, color: G, textDecoration: 'none', display: 'inline-block' }}
+                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = `${G}1a`}
+                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = `${G}0d`}>
+                🎵 ÉCOUTER LA RADIO
+              </a>
+            </div>
           </div>
         )}
       </div>
 
-      {/* CSS animations */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes live-dot {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-          }
-        `
-      }} />
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes live-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes live-glow { 0%,100%{box-shadow:0 0 60px ${R}22,inset 0 0 30px ${R}08} 50%{box-shadow:0 0 80px ${R}44,inset 0 0 40px ${R}14} }
+        @keyframes live-ring { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.08);opacity:0.1} }
+      `}} />
     </div>
   );
 }

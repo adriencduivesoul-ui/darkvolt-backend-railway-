@@ -16,6 +16,10 @@ export function useWebRTCViewer(userId: string, username: string, streamerId?: s
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const joinedRef = useRef(false);
 
+  useEffect(() => {
+    joinedRef.current = false;
+  }, [streamerId]);
+
   const join = useCallback(() => {
     if (joinedRef.current) return;
     console.log('🎥 WebRTC Viewer: Joining stream as', username);

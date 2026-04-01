@@ -17,24 +17,17 @@ export function useWebRTCBroadcaster() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(true); // État du micro
   const peers = useRef<Map<string, RTCPeerConnection>>(new Map());
   const streamRef = useRef<MediaStream | null>(null);
+  const micTrackRef = useRef<MediaStreamTrack | null>(null);
   const audioMixCtxRef = useRef<AudioContext | null>(null);
 
-  // Toggle microphone en temps réel
+  // Toggle microphone en temps réel (utilise la référence directe du track mic)
   const toggleMicrophone = useCallback(() => {
-    if (!streamRef.current) return;
-    
-    const newMicrophoneState = !microphoneEnabled;
-    setMicrophoneEnabled(newMicrophoneState);
-    
-    const audioTracks = streamRef.current.getAudioTracks();
-    audioTracks.forEach(track => {
-      if (track.label && (track.label.toLowerCase().includes('microphone') || 
-                         track.label.toLowerCase().includes('mic') ||
-                         track.label.toLowerCase().includes('default'))) {
-        track.enabled = newMicrophoneState;
-        console.log('🎙 Microphone track', newMicrophoneState ? 'enabled' : 'disabled', ':', track.label);
-      }
-    });
+    const newState = !microphoneEnabled;
+    setMicrophoneEnabled(newState);
+    if (micTrackRef.current) {
+      micTrackRef.current.enabled = newState;
+      console.log('🎙 Microphone', newState ? 'enabled' : 'muted');
+    }
   }, [microphoneEnabled]);
 
   const toggleVideo = useCallback(() => {
@@ -131,7 +124,7 @@ export function useWebRTCBroadcaster() {
     };
   }, [broadcasting, makeOffer]);
 
-  const startBroadcast = useCallback(async (opts: { video: boolean; audio: boolean; microphone?: boolean; extraAudioDeviceId?: string }) => {
+  const startBroadcast = useCallback(async (opts: { video: boolean; audio: boolean; microphone?: boolean; extraAudioDeviceId?: string; preAuthorizedSysStream?: MediaStream }) => {
     setError(null);
     try {
       let stream: MediaStream;
@@ -139,12 +132,61 @@ export function useWebRTCBroadcaster() {
         ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
         : false;
 
-      if (opts.extraAudioDeviceId) {
-        // ── Mode DJ: source audio sélectionnée directement (line-in, carte son, etc.) ──
-        let audioStream: MediaStream;
+      if (opts.extraAudioDeviceId === 'system:audio') {
+        // ── Mode Son Système : capture WASAPI loopback via getDisplayMedia (Boom 3D, VoiceMeeter…) ──
+        let sysStream: MediaStream;
+        // Utilise le stream pré-autorisé depuis le Dashboard (sélectionné avant GO LIVE = pas de popup)
+        if (opts.preAuthorizedSysStream && opts.preAuthorizedSysStream.getAudioTracks().some(t => t.readyState === 'live')) {
+          sysStream = opts.preAuthorizedSysStream;
+        } else {
+          // Fallback : demande à nouveau getDisplayMedia si pas pré-autorisé
+          try {
+            try {
+              sysStream = await (navigator.mediaDevices as any).getDisplayMedia({
+                audio: { suppressLocalAudioPlayback: false, echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+                video: false,
+              });
+            } catch {
+              sysStream = await (navigator.mediaDevices as any).getDisplayMedia({
+                audio: { suppressLocalAudioPlayback: false, echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+                video: true,
+              });
+              sysStream.getVideoTracks().forEach(t => t.stop());
+            }
+          } catch {
+            throw new Error('Accès au son système refusé. Cochez "Partager le son du système" dans le popup navigateur.');
+          }
+        }
+        const audioTracks = sysStream.getAudioTracks();
+        if (!audioTracks.length) throw new Error('Aucun son système capturé — cochez "Partager le son" dans la boîte de dialogue.');
+        micTrackRef.current = null;
+        if (opts.microphone) {
+          try {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: { autoGainControl: true, echoCancellation: true, noiseSuppression: true }, video: false });
+            micTrackRef.current = micStream.getAudioTracks()[0] || null;
+            const ctx = new AudioContext();
+            audioMixCtxRef.current = ctx;
+            await ctx.resume();
+            const dest = ctx.createMediaStreamDestination();
+            ctx.createMediaStreamSource(sysStream).connect(dest);
+            ctx.createMediaStreamSource(micStream).connect(dest);
+            const videoTracks = opts.video ? (await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })).getVideoTracks() : [];
+            stream = new MediaStream([...dest.stream.getAudioTracks(), ...videoTracks]);
+          } catch {
+            const videoTracks = opts.video ? (await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })).getVideoTracks() : [];
+            stream = new MediaStream([...audioTracks, ...videoTracks]);
+          }
+        } else {
+          const videoTracks = opts.video ? (await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })).getVideoTracks() : [];
+          stream = new MediaStream([...audioTracks, ...videoTracks]);
+        }
+        console.log('🖥️ Son système capturé via getDisplayMedia (WASAPI loopback)');
+
+      } else if (opts.extraAudioDeviceId) {
+        // ── Mode DJ: source audio sélectionnée (line-in, carte son, périphérique virtuel Boom 3D…) ──
+        let djStream: MediaStream;
         try {
-          // Tentative avec contraintes optimales (Chrome/Edge)
-          audioStream = await navigator.mediaDevices.getUserMedia({
+          djStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               deviceId: { exact: opts.extraAudioDeviceId },
               autoGainControl: false,
@@ -156,20 +198,51 @@ export function useWebRTCBroadcaster() {
             video: false,
           });
         } catch {
-          // Fallback Firefox : contraintes minimales (juste le deviceId)
-          audioStream = await navigator.mediaDevices.getUserMedia({
+          djStream = await navigator.mediaDevices.getUserMedia({
             audio: { deviceId: { exact: opts.extraAudioDeviceId } },
             video: false,
           });
         }
 
-        if (opts.video) {
-          const videoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
-          stream = new MediaStream([...audioStream.getAudioTracks(), ...videoStream.getVideoTracks()]);
+        if (opts.microphone) {
+          // ── Mode DJ + Micro : mixage WebAudio des deux sources ──
+          try {
+            const micStream = await navigator.mediaDevices.getUserMedia({
+              audio: { autoGainControl: true, echoCancellation: true, noiseSuppression: true },
+              video: false,
+            });
+            micTrackRef.current = micStream.getAudioTracks()[0] || null;
+
+            const ctx = new AudioContext();
+            audioMixCtxRef.current = ctx;
+            await ctx.resume();
+            const dest = ctx.createMediaStreamDestination();
+            ctx.createMediaStreamSource(djStream).connect(dest);
+            ctx.createMediaStreamSource(micStream).connect(dest);
+
+            const videoTracks = opts.video
+              ? (await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })).getVideoTracks()
+              : [];
+            stream = new MediaStream([...dest.stream.getAudioTracks(), ...videoTracks]);
+            console.log('🏛️ + 🎙 DJ source mixée avec micro capturé');
+          } catch {
+            // Micro non disponible, DJ seul
+            micTrackRef.current = null;
+            const videoTracks = opts.video
+              ? (await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })).getVideoTracks()
+              : [];
+            stream = new MediaStream([...djStream.getAudioTracks(), ...videoTracks]);
+            console.log('🏛️ Source DJ seule (micro indisponible):', opts.extraAudioDeviceId);
+          }
         } else {
-          stream = audioStream;
+          // DJ sans micro
+          micTrackRef.current = null;
+          const videoTracks = opts.video
+            ? (await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })).getVideoTracks()
+            : [];
+          stream = new MediaStream([...djStream.getAudioTracks(), ...videoTracks]);
+          console.log('�️ Source DJ capturée:', opts.extraAudioDeviceId);
         }
-        console.log('🎛️ Source DJ capturée directement:', opts.extraAudioDeviceId);
 
       } else {
         // ── Mode micro/défaut ──
@@ -179,6 +252,7 @@ export function useWebRTCBroadcaster() {
             : false,
           video: videoConstraints,
         });
+        micTrackRef.current = stream.getAudioTracks()[0] || null;
         console.log('🎤 Source micro/défaut capturée');
       }
 
@@ -188,11 +262,13 @@ export function useWebRTCBroadcaster() {
       setAudioEnabled(opts.audio);
       setBroadcasting(true);
       socket.emit('broadcaster:register', { hasVideo: opts.video });
+      return true;
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Accès média refusé';
       console.error('🎥 WebRTC Broadcaster: Error starting broadcast', err);
       setError(msg);
+      return false;
     }
   }, []);
 
@@ -200,11 +276,14 @@ export function useWebRTCBroadcaster() {
     audioMixCtxRef.current?.close().catch(() => {});
     audioMixCtxRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
+    micTrackRef.current?.stop();
+    micTrackRef.current = null;
     peers.current.forEach(pc => pc.close());
     peers.current.clear();
     streamRef.current = null;
     setLocalStream(null);
     setBroadcasting(false);
+    setMicrophoneEnabled(true);
     socket.emit('broadcaster:stop');
   }, []);
 

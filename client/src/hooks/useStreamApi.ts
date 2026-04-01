@@ -69,7 +69,7 @@ export function useStreamApi(userId?: string) {
           title: data.title || '',
           description: data.description || '',
           genre: data.genre || '',
-          streamerName: data.streamer_name || `Streamer-${data.streamer_id?.slice(0, 8)}` || 'Unknown Streamer',
+          streamerName: data.streamer_name || (data.streamer_id ? `Streamer-${data.streamer_id.slice(0, 8)}` : ''),
           streamerId: data.streamer_id || '',
           startedAt: data.started_at ? new Date(data.started_at).getTime() : null,
           viewers: data.viewer_count || 0,

@@ -52,12 +52,12 @@ export default function UserDashboard() {
 
   /* Auto-join live stream */
   useEffect(() => {
-    if (status.isLive && !videoConnected) {
+    if (status.isLive && status.streamerId && !videoConnected) {
       join();
     } else if (!status.isLive && videoConnected) {
       leave();
     }
-  }, [status.isLive, videoConnected, join, leave]);
+  }, [status.isLive, status.streamerId, videoConnected, join, leave]);
 
   const addFav = (track: { title: string; dj: string; genre: string }) => {
     if (favorites.find(f => f.title === track.title)) return;

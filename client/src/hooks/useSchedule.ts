@@ -14,7 +14,15 @@ export interface ScheduleEvent {
   recurring: 'weekly' | 'monthly' | null;
 }
 
-const API = (import.meta.env.VITE_API_URL as string) || '';
+const API = 'https://darkvolt-backend-production.up.railway.app';
+
+const authHeaders = () => {
+  const token = localStorage.getItem('darkvolt_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export function useSchedule() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
@@ -34,7 +42,7 @@ export function useSchedule() {
     try {
       const r = await fetch(`${API}/api/schedule`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(ev),
       });
       if (r.ok) {
@@ -50,7 +58,7 @@ export function useSchedule() {
     try {
       const r = await fetch(`${API}/api/schedule/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(patch),
       });
       if (r.ok) {
@@ -62,7 +70,7 @@ export function useSchedule() {
 
   const deleteEvent = useCallback(async (id: string) => {
     try {
-      await fetch(`${API}/api/schedule/${id}`, { method: 'DELETE' });
+      await fetch(`${API}/api/schedule/${id}`, { method: 'DELETE', headers: authHeaders() });
       setEvents(prev => prev.filter(e => e.id !== id));
     } catch {}
   }, []);

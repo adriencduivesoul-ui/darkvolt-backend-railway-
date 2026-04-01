@@ -46,7 +46,7 @@ export default function StreamerDashboard() {
   const { status, history, goLive, endStream, updateStream, getLiveDuration, formatDuration } = useStreamApi(user?.id);
   const { messages, pinnedMsg, bannedUsers, connected: chatConnected, sendMessage, clearChat, unbanUser, deleteMessage, pinMessage, banUser } = useChatSocket() as any;
   const { events: scheduleEvents, addEvent, deleteEvent } = useSchedule();
-  const { profile, saving: profileSaving, saved: profileSaved, saveProfile } = useStreamerProfile();
+  const { profile, saving: profileSaving, saved: profileSaved, loaded: profileLoaded, saveProfile } = useStreamerProfile();
   const { broadcasting, videoEnabled, audioEnabled, error: rtcError, startBroadcast, stopBroadcast, toggleVideo, toggleAudio, toggleMicrophone, microphoneEnabled } = useWebRTCBroadcaster();
   const [tab, setTab] = useState<Tab>('accueil');
   const [chatInput, setChatInput] = useState('');
@@ -236,6 +236,21 @@ export default function StreamerDashboard() {
 
   const [profForm, setProfForm] = useState({ bio: profile.bio, avatar: profile.avatar, instagram: profile.instagram, facebook: profile.facebook, discord: profile.discord, twitch: profile.twitch, soundcloud: profile.soundcloud, website: profile.website });
   const saveProf = useCallback(() => saveProfile(profForm), [profForm, saveProfile]);
+
+  useEffect(() => {
+    if (profileLoaded) {
+      setProfForm({
+        bio: profile.bio || '',
+        avatar: profile.avatar || '',
+        instagram: profile.instagram || '',
+        facebook: profile.facebook || '',
+        discord: profile.discord || '',
+        twitch: profile.twitch || '',
+        soundcloud: profile.soundcloud || '',
+        website: profile.website || '',
+      });
+    }
+  }, [profileLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -893,7 +908,7 @@ export default function StreamerDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <BentoCard title={t('streamerDash.avatarLabel')}>
                 <div style={{ padding: '16px' }}>
-                  <AvatarUpload currentAvatar={profile.avatar} onAvatarChange={(url: string) => setProfForm({ ...profForm, avatar: url })} />
+                  <AvatarUpload currentAvatar={profForm.avatar} onAvatarChange={(url: string) => setProfForm({ ...profForm, avatar: url })} />
                 </div>
               </BentoCard>
               <BentoCard title={t('streamerDash.profileInfoLabel')}>

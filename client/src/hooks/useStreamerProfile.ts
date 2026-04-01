@@ -33,12 +33,13 @@ export function useStreamerProfile() {
   const [profile, setProfile] = useState<StreamerProfile>(DEFAULT);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/api/profile`, { headers: authHeaders() })
       .then(r => r.ok ? r.json() : DEFAULT)
-      .then(setProfile)
-      .catch(() => {});
+      .then(data => { setProfile(data); setLoaded(true); })
+      .catch(() => { setLoaded(true); });
 
     const handler = (p: StreamerProfile) => setProfile(p);
     socket.on('profile:updated', handler);
@@ -63,5 +64,5 @@ export function useStreamerProfile() {
     setSaving(false);
   }, []);
 
-  return { profile, saving, saved, saveProfile };
+  return { profile, saving, saved, loaded, saveProfile };
 }

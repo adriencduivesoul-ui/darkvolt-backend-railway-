@@ -119,8 +119,9 @@ export default function LiveStream() {
   const [scheduleVisible, setScheduleVisible] = useState(false);
   const { events: allEvents, isLiveNow: checkLive } = useSchedule();
   const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
   const SHOWS: ShowItem[] = allEvents
-    .filter(e => new Date(e.date + 'T' + e.startTime + ':00') >= new Date(now.getTime() - e.duration * 60000))
+    .filter(e => e.date >= todayStr)
     .slice(0, 8)
     .map(e => ({ ...e, isLiveNow: checkLive(e) }));
 

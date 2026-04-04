@@ -106,13 +106,19 @@ async function startServer() {
     const { email, password, code, username } = req.body;
     
     // Simulation d'utilisateur Discord (accepte email/password)
+    // Déterminer le rôle en fonction de l'email (mock)
+    const isStreamer = email === "adrientorcol@gmail.com" || email?.includes("streamer") || username?.includes("streamer");
+    
     const mockUser = {
       id: "123456789",
       username: username || email?.split('@')[0] || "darkvolt_user",
       discriminator: "0001",
       avatar: "avatar_hash",
+      avatar_url: "https://cdn.discordapp.com/avatars/123456789/avatar_hash.png",
       email: email || "user@example.com",
-      verified: true
+      verified: true,
+      role: isStreamer ? "streamer" : "user", // Rôle correct
+      created_at: "2024-01-01T00:00:00.000Z" // Date de création
     };
     
     res.json({
@@ -135,20 +141,52 @@ async function startServer() {
     });
   });
 
+  app.post("/api/auth/register", (req, res) => {
+    const { username, email, password, role } = req.body;
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "Username, email and password required" });
+    }
+    
+    // Mock user creation
+    const mockUser = {
+      id: "user_" + Date.now(),
+      username: username,
+      discriminator: "0001",
+      avatar: "avatar_hash",
+      avatar_url: "https://cdn.discordapp.com/avatars/default.png",
+      email: email,
+      verified: true,
+      role: role || "user", // Utilise le rôle demandé ou user par défaut
+      created_at: new Date().toISOString()
+    };
+    
+    res.json({
+      user: mockUser,
+      token: "mock_jwt_token_" + Date.now(),
+      expiresIn: 3600
+    });
+  });
+
   app.post("/api/auth/logout", (req, res) => {
     res.json({ success: true });
   });
 
   app.get("/api/auth/me", (req, res) => {
-    // Mock current user
-    res.json({
+    // Mock current user - même structure que login
+    const mockUser = {
       id: "123456789",
       username: "darkvolt_user",
       discriminator: "0001",
       avatar: "avatar_hash",
+      avatar_url: "https://cdn.discordapp.com/avatars/123456789/avatar_hash.png",
       email: "user@example.com",
-      verified: true
-    });
+      verified: true,
+      role: "user", // Par défaut user, pourrait être streamer selon logique
+      created_at: "2024-01-01T00:00:00.000Z"
+    };
+    
+    res.json(mockUser);
   });
 
   /* ── STREAM API ── */

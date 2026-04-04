@@ -100,6 +100,16 @@ async function startServer() {
   });
   app.use(express.json());
 
+  /* ── HEALTHCHECK ── */
+  app.get("/", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      service: "darkvolt-backend",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+
   /* ── AUTH API (Discord OAuth) ── */
   app.post("/api/auth/login", (req, res) => {
     // Mock Discord OAuth response - à remplacer avec vrai OAuth
@@ -298,6 +308,75 @@ async function startServer() {
     if (req.body.username) streamStatus.streamerName = streamerProfile.username;
     io.emit("profile:updated", streamerProfile);
     res.json(streamerProfile);
+  });
+
+  /* ── DJ APPLICATION WEBHOOK ── */
+  app.post("/api/dj-application", async (req, res) => {
+    try {
+      const { name, email, experience, equipment, availability, motivation, commitment } = req.body;
+      
+      // Validation basique
+      if (!name || !email) {
+        return res.status(400).json({ error: "Name and email are required" });
+      }
+      
+      // URL du webhook Discord
+      const webhookUrl = process.env.DISCORD_RECRUITMENT_WEBHOOK_URL;
+      
+      if (!webhookUrl) {
+        console.error("❌ DISCORD_RECRUITMENT_WEBHOOK_URL non configuré");
+        return res.status(500).json({ error: "Webhook not configured" });
+      }
+      
+      // Préparer le message Discord
+      const discordMessage = {
+        embeds: [{
+          title: "🎧 Nouvelle Candidature DJ",
+          color: 0x39FF14, // Vert néon
+          fields: [
+            { name: "👤 Nom", value: name, inline: true },
+            { name: "📧 Email", value: email, inline: true },
+            { name: "🎛️ Expérience", value: experience || "Non spécifiée", inline: false },
+            { name: "🎹 Équipement", value: equipment || "Non spécifié", inline: false },
+            { name: "📅 Disponibilité", value: availability || "Non spécifiée", inline: false },
+            { name: "🔥 Motivation", value: motivation || "Non spécifiée", inline: false },
+            { name: "⚡ Engagement", value: commitment || "Non spécifié", inline: false }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: "DarkVolt - Recrutement DJ",
+            icon_url: "https://darkvolt.fr/img/logo.png"
+          }
+        }]
+      };
+      
+      console.log("📤 Envoi vers Discord:", JSON.stringify(discordMessage, null, 2));
+      
+      // Envoyer vers Discord
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(discordMessage)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Erreur Discord:", response.status, errorText);
+        return res.status(500).json({ error: "Failed to send to Discord", details: errorText });
+      }
+      
+      console.log("✅ Candidature envoyée avec succès à Discord");
+      res.json({ success: true, message: "Application sent successfully" });
+      
+    } catch (error: any) {
+      console.error("❌ Erreur lors du traitement de la candidature:", error);
+      res.status(500).json({ 
+        error: "Internal server error", 
+        details: error.message 
+      });
+    }
   });
 
   /* ── SOCKET.IO ── */

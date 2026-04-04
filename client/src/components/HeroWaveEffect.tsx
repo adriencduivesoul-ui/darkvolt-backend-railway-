@@ -136,6 +136,9 @@ void main() {
 }
 `;
 
+const WAVE_FPS      = 1000 / 30; /* 30 fps cap */
+const HALF_RES      = 0.5;        /* render at 50% → CSS upscale — 4× fewer pixels */
+
 export default function HeroWaveEffect() {
   const mountRef = useRef<HTMLDivElement>(null);
 
@@ -143,14 +146,17 @@ export default function HeroWaveEffect() {
     const mount = mountRef.current;
     if (!mount) return;
 
-    const W = mount.clientWidth || window.innerWidth;
-    const H = mount.clientHeight || window.innerHeight;
+    let active = true;
+
+    const W = Math.floor((mount.clientWidth  || window.innerWidth)  * HALF_RES);
+    const H = Math.floor((mount.clientHeight || window.innerHeight) * HALF_RES);
 
     // ── Three.js setup ────────────────────────────────────────
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const renderer = new WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(1);              /* never scale — already half-res */
     renderer.setSize(W, H);
     renderer.setClearColor(0x000000, 0);
+    /* CSS stretch to full size — smooth enough for abstract waves */
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.inset = '0';
     renderer.domElement.style.width = '100%';
@@ -282,14 +288,39 @@ export default function HeroWaveEffect() {
       return (sum / len) * 0.7 + maxV * 0.3;
     };
 
-    // ── Animation loop ────────────────────────────────────────
-    const animate = () => {
-      animId = requestAnimationFrame(animate);
-      time     += 0.01;
-      idleAnim += 0.01;
+    /* ── Pause when off-screen or tab hidden ── */
+    let inView = true;
+    const observer = new IntersectionObserver(
+      (e) => { inView = e[0].isIntersecting; },
+      { threshold: 0 },
+    );
+    observer.observe(mount);
+    const onVis = () => { if (!document.hidden && active) animate(0); };
+    document.addEventListener('visibilitychange', onVis);
 
+    // ── Animation loop — 30 fps cap ───────────────────────────
+    let lastFrame = 0;
+    let audioFrame = 0;
+    const animate = (timestamp: number) => {
+      if (!active) return;
+      animId = requestAnimationFrame(animate);
+      if (!inView || document.hidden) return;
+
+      const delta = timestamp - lastFrame;
+      if (delta < WAVE_FPS) return;
+      lastFrame = timestamp - (delta % WAVE_FPS);
+
+      time     += 0.018;
+      idleAnim += 0.018;
+      audioFrame++;
+
+      /* run heavy audio analysis only every 3rd frame */
       const analyser  = heroAnalyser;
       const isPlaying = !!heroAnalyser && !hiddenAudio.paused && heroCtx?.state === 'running';
+      if (audioFrame % 3 !== 0 && isPlaying) {
+        renderer.render(scene, camera);
+        return;
+      }
 
       // Smooth transition factor
       if (isPlaying) transitionFactor = Math.min(transitionFactor + 0.025, 1.0);
@@ -343,19 +374,22 @@ export default function HeroWaveEffect() {
       renderer.render(scene, camera);
     };
 
-    animate();
+    animate(0);
 
     // ── Resize ────────────────────────────────────────────────
     const onResize = () => {
       if (!mount) return;
-      const w = mount.clientWidth || window.innerWidth;
-      const h = mount.clientHeight || window.innerHeight;
+      const w = Math.floor((mount.clientWidth  || window.innerWidth)  * HALF_RES);
+      const h = Math.floor((mount.clientHeight || window.innerHeight) * HALF_RES);
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', onResize);
 
     return () => {
+      active = false;
       cancelAnimationFrame(animId);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('resize', onResize);
       hiddenAudio.pause();
       hiddenAudio.src = '';

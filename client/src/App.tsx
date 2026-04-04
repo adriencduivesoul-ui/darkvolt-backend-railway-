@@ -19,6 +19,7 @@ import CGU from "./pages/CGU";
 import Confidentialite from "./pages/Confidentialite";
 import Contact from "./pages/Contact";
 import Artistes from "./pages/Artistes";
+import RecrutementDJ from "./pages/RecrutementDJ";
 import SoumettreUnMix from "./pages/SoumettreUnMix";
 import LiveStream from './pages/LiveStream';
 import Archives from './pages/Archives';
@@ -36,6 +37,7 @@ function Router() {
       <Route path={"/confidentialite"} component={Confidentialite} />
       <Route path={"/contact"} component={Contact} />
       <Route path={"/artistes"} component={Artistes} />
+      <Route path={"/recrutement-dj"} component={RecrutementDJ} />
       <Route path={"/soumettre-un-mix"} component={SoumettreUnMix} />
       <Route path={"/live"} component={LiveStream} />
       <Route path={"/archives"} component={Archives} />

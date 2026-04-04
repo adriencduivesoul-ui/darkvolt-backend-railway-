@@ -316,6 +316,60 @@ async function startServer() {
     res.status(200).json({ service: "DarkVolt API", status: "running" });
   });
 
+  /* ── Discord Webhook pour Recrutement DJ ── */
+  app.post("/api/dj-application", express.json(), async (req, res) => {
+    try {
+      const { message, applicant, email, discord } = req.body;
+      
+      // Webhook Discord (à configurer avec l'URL réelle du salon 🎧𝑟𝑒𝑐𝑟𝑢𝑡𝑒𝑚𝑒𝑛𝑡-𝑑𝑗-𝑜𝑓𝑓𝑖𝑐𝑖𝑒𝑙🎧)
+      const discordWebhookUrl = process.env.DISCORD_RECRUITMENT_WEBHOOK_URL;
+      
+      if (!discordWebhookUrl) {
+        console.warn('[DarkVolt] Discord webhook URL not configured');
+        return res.status(500).json({ error: 'Webhook not configured' });
+      }
+
+      console.log('[DarkVolt] Sending to Discord webhook:', discordWebhookUrl);
+
+      const payload = {
+        content: `🎧 **NOUVELLE CANDIDATURE DJ** 🎧\n\n**${applicant}** (${email}) - ${discord}`,
+        embeds: [{
+          title: `Candidature DJ - ${applicant}`,
+          description: message,
+          color: 0x39FF14, // DarkVolt green
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: 'DarkVolt Radio - Recrutement Officiel'
+          }
+        }]
+      };
+
+      const response = await fetch(discordWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'DarkVolt-DJ-Recruitment/1.0',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[DarkVolt] Discord webhook error:', response.status, errorText);
+        throw new Error(`Discord webhook failed: ${response.status} - ${errorText}`);
+      }
+
+      const responseData = await response.json();
+      console.log(`[DarkVolt] DJ application submitted: ${applicant}`);
+      console.log('[DarkVolt] Discord response:', responseData);
+      res.status(200).json({ success: true, message: 'Application sent to Discord' });
+      
+    } catch (error) {
+      console.error('[DarkVolt] Error sending DJ application:', error);
+      res.status(500).json({ error: 'Failed to send application' });
+    }
+  });
+
   const port = process.env.PORT || 3000;
   server.listen(port, () => {
     console.log(`[DarkVolt] Server → http://localhost:${port}`);

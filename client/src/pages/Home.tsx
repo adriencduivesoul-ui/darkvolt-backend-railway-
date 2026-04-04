@@ -14,6 +14,7 @@ import Navigation from '@/components/Navigation';
 import Preloader from '@/components/Preloader';
 import ShowsSection from '@/components/ShowsSection';
 import ScrollReveal from '@/components/ScrollReveal';
+import BackToTop from '@/components/BackToTop';
 
 export default function Home() {
   const [preloaderDone, setPreloaderDone] = useState(false);
@@ -72,6 +73,7 @@ export default function Home() {
           <Footer />
         </ScrollReveal>
       </div>
+      <BackToTop />
     </>
   );
 }

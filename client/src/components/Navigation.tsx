@@ -8,12 +8,14 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navigation() {
   const [location, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
@@ -140,13 +142,13 @@ export default function Navigation() {
             {t('nav.listen')}
           </a>
           <button
-            onClick={() => navigate('/auth')}
+            onClick={() => navigate(isAuthenticated ? '/dashboard' : '/auth')}
             className="font-orbitron font-bold text-xs tracking-[0.2em] uppercase px-5 py-2.5 transition-all duration-300"
             style={{ background: 'transparent', border: '1px solid rgba(255,26,26,0.6)', color: '#FF1A1A88', clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FF1A1A'; (e.currentTarget as HTMLButtonElement).style.color = '#050505'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 20px #FF1A1A'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#FF1A1A88'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
           >
-            {t('nav.login')}
+            {isAuthenticated ? 'MON COMPTE' : t('nav.login')}
           </button>
           <LanguageSwitcher />
         </div>

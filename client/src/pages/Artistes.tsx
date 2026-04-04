@@ -8,6 +8,7 @@ import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
+import ArtistPortraitGLB from '@/components/ArtistPortraitGLB';
 
 /* ── Design tokens ────────────────────────────────────────── */
 const G = '#39FF14';
@@ -19,7 +20,7 @@ const CLIP_SM = CLIP(10);
 const CLIP_LG = CLIP(22);
 
 /* ── Artist data ─────────────────────────────────────────── */
-const GENRES_STATIC = ['TECHNO', 'INDUSTRIAL', 'DARK ELECTRO', 'TRIBECORE', 'HARDTEK', 'EXPÉRIMENTAL'];
+const GENRES_STATIC = ['HARDTEK', 'TRIBECORE', 'RAGGATEK', 'TRIBE', 'FRENCHCORE', 'HARDCORE', 'TECHNO', 'INDUSTRIAL', 'DARK ELECTRO', 'EXPÉRIMENTAL'];
 
 interface Artist {
   id: string;
@@ -33,105 +34,44 @@ interface Artist {
   symbol: string;
   featured?: boolean;
   origin: string;
+  avatar?: string;
+  glb3d?: string;   /* chemin GLB portrait 3D */
+  glbLogo?: string; /* logo PNG en fond du GLB */
+  soundcloud?: string;
+  facebook?: string;
 }
 
 const ARTISTS: Artist[] = [
   {
     id: 'darklouxxx',
-    name: 'DarklouXxX',
+    name: 'DarklouXxX Aka Poney',
     alias: 'LE FONDATEUR',
-    genres: ['TRIBECORE', 'HARDTEK', 'TECHNO'],
+    genres: ['HARDTEK', 'TRIBECORE', 'RAGGATEK', 'TRIBE', 'FRENCHCORE', 'HARDCORE', 'TECHNO', 'HARDTECHNO'],
     mixes: 4,
-    bio: 'Fondateur de DarkVolt et pionnier de la scène Tribecore française. Ses sets bruts à l\'XDJ-700 définissent l\'identité sonore underground du label.',
+    bio: 'Dans le son depuis 2009, des premiers sets sur contrôleur jusqu\'aux platines Pioneer XDJ-700, DJM-450 et PLX-500 en timecode vinyl. Tape du sabot sur du kick — fondateur de DarkVolt et architecte de la scène underground.',
     accent: G,
     accent2: G,
     symbol: 'D×',
     featured: true,
-    origin: 'France',
+    origin: 'Guéret, France',
+    avatar: '/img/Darklouxxx-profile.avif',
+    glb3d:  '/darklouxxx-figure-opt.glb',
+    glbLogo: '/img/logo_poney.png',
+    soundcloud: 'https://soundcloud.com/darklouxxx',
+    facebook: 'https://www.facebook.com/DarklouXxX/',
   },
   {
-    id: 'v0id',
-    name: 'V0ID',
-    alias: 'SYSTÈME D\'ERREUR',
-    genres: ['INDUSTRIAL', 'EXPÉRIMENTAL'],
-    mixes: 7,
-    bio: 'Architecture sonore industrielle. Chaque set est une dissection du bruit — précision chirurgicale, chaos contrôlé.',
+    id: 'djnrv',
+    name: 'DJNRV',
+    genres: ['TRIBECORE', 'HARDTEK', 'MENTAL', 'ACID', 'HARDCORE', 'ACIDCORE', 'OLDSCHOOL'],
+    mixes: 0,
+    bio: 'Plongé dans les free parties des années 90, DJNRV découvre une scène brute et sans règles avec les Spiral Tribe. En 1997, il passe de l\'autre côté des enceintes et commence à mixer, façonnant un univers entre tribecore, hardtek et mental. Des vinyles aux contrôleurs, une chose n\'a jamais changé : l\'ADN underground et l\'envie de faire vibrer sans concession.',
     accent: R,
     accent2: O,
-    symbol: '∅',
-    origin: 'Berlin',
-  },
-  {
-    id: 'glitch_shrine',
-    name: 'GLITCH.SHRINE',
-    alias: 'ENTITÉ NUMÉRIQUE',
-    genres: ['DARK ELECTRO', 'EXPÉRIMENTAL'],
-    mixes: 12,
-    bio: 'Quelque part entre la corrupted data et la transe. GLITCH.SHRINE traverse les fréquences interdites.',
-    accent: R,
-    accent2: R,
-    symbol: '⌀',
-    origin: 'Paris',
-  },
-  {
-    id: 'nx_null',
-    name: 'NX/NULL',
-    alias: 'PROTOCOLE NOIR',
-    genres: ['TECHNO', 'INDUSTRIAL'],
-    mixes: 9,
-    bio: 'Techno pure, sans ornements. NX/NULL construit des murs de son avec une efficacité redoutable.',
-    accent: O,
-    accent2: O,
-    symbol: '//N',
-    origin: 'Lyon',
-  },
-  {
-    id: 'sekte_108',
-    name: 'SEKTE.108',
-    alias: 'SIGNAL ANOMALIE',
-    genres: ['TRIBECORE', 'HARDTEK'],
-    mixes: 6,
-    bio: 'Les racines tek free party irriguent chaque production. SEKTE.108 maintient la flamme underground allumée.',
-    accent: O,
-    accent2: R,
-    symbol: 'S∞',
-    origin: 'Toulouse',
-  },
-  {
-    id: 'ferrofluid',
-    name: 'FERROFLUID',
-    alias: 'MATTER OBSCURE',
-    genres: ['DARK ELECTRO', 'TECHNO'],
-    mixes: 5,
-    bio: 'Fusion de synthèse analogique et de traitement numérique radical. Une matière sonore en constante mutation.',
-    accent: G,
-    accent2: G,
-    symbol: 'Fe',
-    origin: 'Nantes',
-  },
-  {
-    id: 'deadzone',
-    name: 'DEADZONE',
-    alias: 'ZONE D\'EXCLUSION',
-    genres: ['INDUSTRIAL', 'HARDTEK'],
-    mixes: 3,
-    bio: 'Post-industriel, post-humain. DEADZONE fait de chaque performance une cérémonie de la désintégration.',
-    accent: R,
-    accent2: R,
-    symbol: 'DZ',
-    origin: 'Bordeaux',
-  },
-  {
-    id: 'phase_inv',
-    name: 'PHASE.INV',
-    alias: 'INVERSION TOTALE',
-    genres: ['EXPÉRIMENTAL', 'DARK ELECTRO'],
-    mixes: 11,
-    bio: 'Compositions génératives, structures rythmiques impossibles. PHASE.INV repousse les frontières de ce qui est jouable.',
-    accent: O,
-    accent2: R,
-    symbol: 'φ',
-    origin: 'Marseille',
+    symbol: 'NV',
+    origin: 'Haute-Saône, France',
+    avatar: '/img/DJNRV-profile.avif',
+    glb3d: '/djnrv-3d-opt.glb',
   },
 ];
 
@@ -170,16 +110,40 @@ function ArtistCard({ artist, visible, delay = 0 }: { artist: Artist; visible: b
           className="relative overflow-hidden flex items-center justify-center"
           style={{
             height: '180px',
-            background: `linear-gradient(135deg, #0a0a0a 0%, ${c}18 50%, #050505 100%)`,
+            background: artist.avatar ? '#000' : `linear-gradient(135deg, #0a0a0a 0%, ${c}18 50%, #050505 100%)`,
             transition: 'all 0.5s ease',
           }}
         >
+          {/* Avatar / 3D GLB */}
+          {artist.glb3d ? (
+            <ArtistPortraitGLB
+              glbPath={artist.glb3d}
+              logoPath={artist.glbLogo}
+              hovered={hovered}
+              accent={c}
+              mode="card"
+            />
+          ) : artist.avatar && (
+            <>
+              <img
+                src={artist.avatar}
+                alt={artist.name}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  objectPosition: 'center top',
+                  opacity: hovered ? 0.6 : 0.42,
+                  transition: 'opacity 0.5s ease',
+                }}
+              />
+              <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, transparent 40%, #000000cc 100%), linear-gradient(135deg, ${c}15 0%, transparent 60%)` }} />
+            </>
+          )}
           {/* Grid lines */}
           <div className="absolute inset-0 pointer-events-none" style={{
             backgroundImage: `linear-gradient(${c}08 1px, transparent 1px), linear-gradient(90deg, ${c}08 1px, transparent 1px)`,
             backgroundSize: '32px 32px',
             transition: 'opacity 0.5s',
-            opacity: hovered ? 1 : 0.4,
+            opacity: hovered ? 0.8 : 0.4,
           }} />
           {/* Center scan line on hover */}
           {hovered && (
@@ -191,7 +155,7 @@ function ArtistCard({ artist, visible, delay = 0 }: { artist: Artist; visible: b
             style={{
               fontSize: '56px',
               color: c,
-              opacity: hovered ? 0.9 : 0.4,
+              opacity: artist.avatar ? (hovered ? 0.5 : 0.12) : (hovered ? 0.9 : 0.4),
               textShadow: hovered ? `0 0 40px ${c}, 0 0 80px ${c}44` : 'none',
               transform: hovered ? 'scale(1.08)' : 'scale(1)',
               transition: 'all 0.4s ease',
@@ -248,23 +212,10 @@ function ArtistCard({ artist, visible, delay = 0 }: { artist: Artist; visible: b
           <div className="flex-1" />
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${c}11` }}>
+          <div className="pt-3" style={{ borderTop: `1px solid ${c}11` }}>
             <span className="font-orbitron text-xs" style={{ color: `${c}55`, fontSize: '10px' }}>
-              {artist.mixes} MIX{artist.mixes > 1 ? 'ES' : ''}
+              {artist.mixes > 0 ? `${artist.mixes} MIX${artist.mixes > 1 ? 'ES' : ''}` : ''}
             </span>
-            <button
-              className="font-orbitron font-bold text-xs tracking-[0.2em] uppercase px-4 py-1.5 transition-all duration-300"
-              style={{
-                background: hovered ? c : 'transparent',
-                border: `1px solid ${c}88`,
-                color: hovered ? '#050505' : `${c}88`,
-                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
-                fontSize: '9px',
-                boxShadow: hovered ? `0 0 16px ${c}66` : 'none',
-              }}
-            >
-              {t('artists.listenSingle')}
-            </button>
           </div>
         </div>
       </div>
@@ -332,20 +283,55 @@ function FeaturedCard({ artist, visible }: { artist: Artist; visible: boolean })
         <div style={{ position: 'absolute', top: 16, left: 16, width: 24, height: 24, borderTop: `2px solid ${c}`, borderLeft: `2px solid ${c}`, opacity: hovered ? 1 : 0.5, transition: 'all 0.4s', zIndex: 20, boxShadow: hovered ? `inset 6px 6px 0 -5px ${c}33` : 'none', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 16, right: 16, width: 24, height: 24, borderBottom: `2px solid ${c}55`, borderRight: `2px solid ${c}55`, opacity: hovered ? 1 : 0.4, transition: 'all 0.4s', zIndex: 20, pointerEvents: 'none' }} />
 
-        {/* FEATURED badge */}
-        <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 30 }}>
-          <div className="font-orbitron font-black text-xs tracking-[0.3em] uppercase px-4 py-1.5"
-            style={{ background: `${c}18`, border: `1px solid ${c}55`, color: c, clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)', fontSize: '9px', boxShadow: `0 0 20px ${c}22` }}>
-            {t('artists.featuredBadge')}
+        {/* FEATURED badge — only for founder */}
+        {artist.featured && (
+          <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 30 }}>
+            <div className="font-orbitron font-black text-xs tracking-[0.3em] uppercase px-4 py-1.5"
+              style={{ background: `${c}18`, border: `1px solid ${c}55`, color: c, clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)', fontSize: '9px', boxShadow: `0 0 20px ${c}22` }}>
+              {t('artists.featuredBadge')}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Big symbol visual */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.07 }}>
-          <span className="font-orbitron font-black" style={{ fontSize: '280px', color: c, lineHeight: 1, letterSpacing: '-10px' }}>
-            {artist.symbol}
-          </span>
-        </div>
+        {/* Avatar portrait (right side) — 3D GLB si dispo, sinon photo */}
+        {artist.glb3d ? (
+          <>
+            <ArtistPortraitGLB
+              glbPath={artist.glb3d}
+              logoPath={artist.glbLogo}
+              hovered={hovered}
+              accent={c}
+            />
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: `linear-gradient(90deg, #050505 38%, #05050580 65%, transparent 100%)`,
+            }} />
+          </>
+        ) : artist.avatar ? (
+          <>
+            <img
+              src={artist.avatar}
+              alt={artist.name}
+              className="absolute pointer-events-none"
+              style={{
+                right: 0, top: 0, height: '100%', width: '52%',
+                objectFit: 'cover', objectPosition: 'center top',
+                opacity: hovered ? 0.72 : 0.55,
+                transition: 'opacity 0.6s ease',
+                maskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.6) 25%, #000 60%)',
+                WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.6) 25%, #000 60%)',
+              }}
+            />
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: `linear-gradient(90deg, #050505 38%, #05050580 65%, transparent 100%)`,
+            }} />
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.07 }}>
+            <span className="font-orbitron font-black" style={{ fontSize: '280px', color: c, lineHeight: 1, letterSpacing: '-10px' }}>
+              {artist.symbol}
+            </span>
+          </div>
+        )}
 
         {/* Scan line on hover */}
         {hovered && (
@@ -353,45 +339,45 @@ function FeaturedCard({ artist, visible }: { artist: Artist; visible: boolean })
         )}
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col h-full p-8 pt-16">
-          {/* Stats row */}
-          <div className="flex gap-6 mb-auto mt-24">
-            {[
-              { label: t('artists.stats.artists'), value: String(ARTISTS.length), accent: G },
-              { label: t('artists.stats.mixes'), value: '47', accent: G },
-              { label: t('artists.stats.genres'), value: '8', accent: G },
-              { label: t('artists.stats.signal'), value: '24/7', accent: R },
-            ].map(({ label, value, accent }) => (
-              <div key={label} className="flex flex-col gap-1">
-                <span className="font-orbitron font-black" style={{ fontSize: '24px', color: accent, textShadow: hovered ? `0 0 20px ${accent}` : 'none', transition: 'text-shadow 0.4s' }}>{value}</span>
-                <span className="font-orbitron text-xs tracking-[0.2em]" style={{ color: '#e8e8e833', fontSize: '9px' }}>{label}</span>
-              </div>
-            ))}
-          </div>
+        <div className="relative z-10 flex flex-col h-full p-8" style={{ maxWidth: '58%' }}>
 
-          {/* Divider */}
-          <div className="my-6" style={{ height: '1px', background: `linear-gradient(90deg, ${c}44, transparent)` }} />
+          {/* Top spacer */}
+          <div className="flex-1" style={{ minHeight: '32px' }} />
+
+          {/* Alias */}
+          <span className="font-orbitron text-xs tracking-[0.35em] uppercase mb-2 block" style={{ color: `${c}77`, fontSize: '9px' }}>
+            {artist.alias}
+          </span>
 
           {/* Name */}
-          <div className="mb-2">
-            <span className="font-orbitron text-xs tracking-[0.3em] uppercase" style={{ color: `${c}66`, fontSize: '10px' }}>
-              {artist.alias}
-            </span>
-          </div>
           <h2
-            className="font-orbitron font-black uppercase leading-none mb-4"
+            className="font-orbitron font-black uppercase leading-none mb-3"
             style={{
-              fontSize: 'clamp(28px, 4vw, 48px)',
+              fontSize: 'clamp(22px, 3.2vw, 40px)',
               color: '#ffffff',
               textShadow: hovered ? `0 0 40px ${c}77` : 'none',
               transition: 'text-shadow 0.4s',
+              lineHeight: 1.1,
             }}
           >
             {artist.name}
           </h2>
 
+          {/* Origin */}
+          {artist.origin && (
+            <div className="flex items-center gap-1.5 mb-4">
+              <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M5 0C2.24 0 0 2.24 0 5c0 3.75 5 7 5 7s5-3.25 5-7c0-2.76-2.24-5-5-5zm0 6.5A1.5 1.5 0 1 1 5 3.5a1.5 1.5 0 0 1 0 3z" fill={`${c}88`}/>
+              </svg>
+              <span className="font-orbitron text-xs tracking-[0.2em]" style={{ color: `${c}77`, fontSize: '10px' }}>{artist.origin}</span>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="mb-4" style={{ height: '1px', background: `linear-gradient(90deg, ${c}44, transparent)` }} />
+
           {/* Genre tags */}
-          <div className="flex flex-wrap gap-2 mb-5">
+          <div className="flex flex-wrap gap-2 mb-4">
             {artist.genres.map(g => (
               <span key={g} className="font-orbitron text-xs tracking-wider uppercase px-3 py-1"
                 style={{ background: `${c}12`, border: `1px solid ${c}33`, color: `${c}cc`, clipPath: 'polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)', fontSize: '9px' }}>
@@ -401,38 +387,66 @@ function FeaturedCard({ artist, visible }: { artist: Artist; visible: boolean })
           </div>
 
           {/* Bio */}
-          <p className="font-space text-sm leading-relaxed mb-6" style={{ color: '#e8e8e877', maxWidth: '420px' }}>
-            {artist.bio}
-          </p>
+          {artist.bio && (
+            <p className="font-space text-sm leading-relaxed mb-5" style={{ color: '#e8e8e877', maxWidth: '360px', fontSize: '12px' }}>
+              {artist.bio}
+            </p>
+          )}
 
-          {/* CTA buttons */}
-          <div className="flex gap-3">
-            <button
-              className="font-orbitron font-bold text-xs tracking-[0.25em] uppercase px-6 py-3 transition-all duration-300"
+          {/* Social links */}
+          <div className="flex gap-2 flex-wrap">
+          {artist.soundcloud && (
+            <a
+              href={artist.soundcloud}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 font-orbitron font-bold text-xs tracking-[0.2em] uppercase px-5 py-2.5 transition-all duration-300"
               style={{
-                background: hovered ? c : 'transparent',
-                border: `1px solid ${c}`,
-                color: hovered ? '#050505' : c,
+                background: hovered ? `${c}18` : 'transparent',
+                border: `1px solid ${c}55`,
+                color: c,
                 clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-                boxShadow: hovered ? `0 0 28px ${c}66` : `0 0 10px ${c}22`,
+                fontSize: '9px',
+                boxShadow: hovered ? `0 0 20px ${c}33` : `0 0 8px ${c}11`,
+                textDecoration: 'none',
+                alignSelf: 'flex-start',
+                letterSpacing: '0.2em',
               }}
             >
-              {t('artists.listenBtn')}
-            </button>
-            <button
-              className="font-orbitron font-bold text-xs tracking-[0.25em] uppercase px-6 py-3 transition-all duration-300"
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+                <path d="M0 7.5C0 8.33 0.67 9 1.5 9S3 8.33 3 7.5V5c0-.83-.67-1.5-1.5-1.5S0 4.17 0 5v2.5zM3.5 8.5C3.5 9.33 4.17 10 5 10s1.5-.67 1.5-1.5V2c0-.83-.67-1.5-1.5-1.5S3.5 1.17 3.5 2v6.5zM7 9.5C7 9.78 7.22 10 7.5 10s.5-.22.5-.5V3c0-.28-.22-.5-.5-.5S7 2.72 7 3v6.5zM8.5 9c0 .55.45 1 1 1s1-.45 1-1V1c0-.55-.45-1-1-1s-1 .45-1 1v8zM11 8.5c0 .83.67 1.5 1.5 1.5S14 9.33 14 8.5v-7C14 .67 13.33 0 12.5 0S11 .67 11 1.5v7z" fill="currentColor"/>
+              </svg>
+              SoundCloud
+            </a>
+          )}
+          {artist.facebook && (
+            <a
+              href={artist.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 font-orbitron font-bold text-xs tracking-[0.2em] uppercase px-5 py-2.5 transition-all duration-300"
               style={{
-                background: 'transparent',
-                border: `1px solid ${R}44`,
-                color: `${R}88`,
+                background: hovered ? `${c}18` : 'transparent',
+                border: `1px solid ${c}55`,
+                color: c,
                 clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                fontSize: '9px',
+                boxShadow: hovered ? `0 0 20px ${c}33` : `0 0 8px ${c}11`,
+                textDecoration: 'none',
+                letterSpacing: '0.2em',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = R; (e.currentTarget as HTMLButtonElement).style.color = R; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = `${R}44`; (e.currentTarget as HTMLButtonElement).style.color = `${R}88`; }}
             >
-              {t('artists.profileBtn')}
-            </button>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              Facebook
+            </a>
+          )}
           </div>
+
+          {/* Bottom spacer */}
+          <div className="flex-1" style={{ minHeight: '24px' }} />
+
         </div>
       </div>
     </div>
@@ -457,7 +471,8 @@ function StatBlock({ value, label, accent }: { value: string; label: string; acc
 export default function Artistes() {
   const { t } = useTranslation();
   const filterAll = t('artists.filterAll');
-  const GENRES = [filterAll, ...GENRES_STATIC];
+  const artistGenres = Array.from(new Set(ARTISTS.flatMap(a => a.genres))).sort();
+  const GENRES = [filterAll, ...artistGenres];
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [, navigate] = useLocation();
@@ -578,9 +593,9 @@ export default function Artistes() {
             >
               <StatBlock value={`${ARTISTS.length}`} label={t('artists.stats.artists')} accent={G} />
               <div style={{ width: '1px', background: `${G}10`, height: '60px', alignSelf: 'center' }} />
-              <StatBlock value={`${ARTISTS.reduce((s, a) => s + a.mixes, 0)}`} label={t('artists.stats.mixes')} accent={G} />
+              <StatBlock value="À VENIR" label={t('artists.stats.mixes')} accent={G} />
               <div style={{ width: '1px', background: `${G}10`, height: '60px', alignSelf: 'center' }} />
-              <StatBlock value={`${GENRES_STATIC.length}`} label={t('artists.stats.genres')} accent={R} />
+              <StatBlock value={`${Array.from(new Set(ARTISTS.flatMap(a => a.genres))).length}`} label={t('artists.stats.genres')} accent={R} />
               <div style={{ width: '1px', background: `${G}10`, height: '60px', alignSelf: 'center' }} />
               <StatBlock value="24/7" label={t('artists.stats.signal')} accent={G} />
             </div>
@@ -629,36 +644,16 @@ export default function Artistes() {
             <p className="font-orbitron text-sm tracking-widest" style={{ color: '#e8e8e833' }}>{t('artists.noResults')}</p>
           </div>
         ) : (
-          <>
-            {/* Main grid: featured left + 4 cards right */}
-            <div
-              className="grid gap-4 mb-4"
-              style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}
-            >
-              {/* Featured */}
-              {featured && (
-                <div style={{ gridColumn: 'span 5' }}>
-                  <FeaturedCard artist={featured} visible={visible} />
-                </div>
-              )}
-
-              {/* First 4 regular cards (2×2) */}
-              <div style={{ gridColumn: 'span 7', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                {others.slice(0, 4).map((artist, i) => (
-                  <ArtistCard key={artist.id} artist={artist} visible={visible} delay={0.1 + i * 0.08} />
-                ))}
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}
+          >
+            {filtered.map((artist) => (
+              <div key={artist.id} style={{ gridColumn: 'span 6' }}>
+                <FeaturedCard artist={artist} visible={visible} />
               </div>
-            </div>
-
-            {/* Remaining cards — 3 per row */}
-            {others.length > 4 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {others.slice(4).map((artist, i) => (
-                  <ArtistCard key={artist.id} artist={artist} visible={visible} delay={0.2 + i * 0.08} />
-                ))}
-              </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </div>
 
@@ -695,6 +690,21 @@ export default function Artistes() {
           </p>
 
           <div className="flex flex-wrap gap-4 justify-center">
+            <button
+              onClick={() => navigate('/recrutement-dj')}
+              className="font-orbitron font-bold text-xs tracking-[0.3em] uppercase px-8 py-4 transition-all duration-300"
+              style={{
+                background: 'transparent',
+                border: `1px solid ${O}`,
+                color: O,
+                clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+                boxShadow: `0 0 20px ${O}33`,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = O; (e.currentTarget as HTMLButtonElement).style.color = '#050505'; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 40px ${O}`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = O; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 20px ${O}33`; }}
+            >
+              {t('artists.djRecruitmentBtn') || 'RECRUTEMENT DJ'}
+            </button>
             <button
               onClick={() => navigate('/soumettre-un-mix')}
               className="font-orbitron font-bold text-xs tracking-[0.3em] uppercase px-8 py-4 transition-all duration-300"

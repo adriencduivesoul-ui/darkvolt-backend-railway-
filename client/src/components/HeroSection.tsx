@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import HeroWaveEffect from './HeroWaveEffect';
+import LogoGLB from './LogoGLB';
 
 export default function HeroSection() {
   const [, navigate] = useLocation();
@@ -52,16 +53,19 @@ export default function HeroSection() {
     return () => clearInterval(interval);
   }, []);
 
-  // Dark atmospheric smoke canvas
+  // Dark atmospheric smoke canvas — optimised (10 puffs, 30fps, half-res)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const SMOKE_FPS = 1000 / 30;
+    const SCALE = 0.5; /* half-res, CSS upscale */
+
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.width  = Math.floor(window.innerWidth  * SCALE);
+      canvas.height = Math.floor(window.innerHeight * SCALE);
     };
     resize();
     window.addEventListener('resize', resize);
@@ -78,6 +82,7 @@ export default function HeroSection() {
     }
 
     const createPuff = (): SmokePuff => ({
+      /* coords in half-res space */
       x: Math.random() * canvas.width,
       y: canvas.height * 0.45 + Math.random() * canvas.height * 0.55,
       vx: (Math.random() - 0.5) * 0.22,
@@ -90,13 +95,19 @@ export default function HeroSection() {
       rChannel: 110 + Math.floor(Math.random() * 70),
     });
 
-    const puffs: SmokePuff[] = Array.from({ length: 22 }, () => {
+    const puffs: SmokePuff[] = Array.from({ length: 10 }, () => {
       const p = createPuff();
       p.life = Math.random() * p.maxLife;
       return p;
     });
 
-    const animate = () => {
+    let lastSmoke = 0;
+    const animate = (ts: number) => {
+      animFrameRef.current = requestAnimationFrame(animate);
+      const delta = ts - lastSmoke;
+      if (delta < SMOKE_FPS) return;
+      lastSmoke = ts - (delta % SMOKE_FPS);
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       puffs.forEach(puff => {
@@ -130,9 +141,8 @@ export default function HeroSection() {
         ctx.fill();
       });
 
-      animFrameRef.current = requestAnimationFrame(animate);
     };
-    animate();
+    animFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('resize', resize);
@@ -164,6 +174,8 @@ export default function HeroSection() {
             backgroundPosition: 'center',
             animation: 'hero-ken-burns 20s ease-in-out infinite alternate',
             willChange: 'transform',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
           }}
         />
       </div>
@@ -176,11 +188,11 @@ export default function HeroSection() {
         }}
       />
 
-      {/* Particle canvas */}
+      {/* Smoke canvas — half-res CSS upscaled */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"
-        style={{ zIndex: 2 }}
+        style={{ zIndex: 2, width: '100%', height: '100%' }}
       />
 
       {/* Three.js audio-reactive wave effect */}
@@ -199,39 +211,15 @@ export default function HeroSection() {
         className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4"
         style={{ gap: '2rem' }}
       >
-        {/* Logo */}
+        {/* Logo — 3D GLB model */}
         <div
-          className="relative"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? 'translateY(0) scale(1)' : 'translateY(-30px) scale(0.95)',
-            transition: 'all 1s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'all 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          {titleGlitch && (
-            <>
-              <img
-                src="/img/DarkVolt.png"
-                alt=""
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                style={{ transform: 'translate(-5px, 0)', filter: 'hue-rotate(90deg)', opacity: 0.5, mixBlendMode: 'screen' }}
-              />
-              <img
-                src="/img/DarkVolt.png"
-                alt=""
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                style={{ transform: 'translate(5px, 0)', filter: 'hue-rotate(-90deg)', opacity: 0.5, mixBlendMode: 'screen' }}
-              />
-            </>
-          )}
-          <img
-            src="/img/DarkVolt.png"
-            alt="DarkVolt"
-            style={{
-              width: 'min(760px, 92vw)',
-              filter: 'drop-shadow(0 0 40px #39FF14aa) drop-shadow(0 0 80px #FF1A1A44)',
-            }}
-          />
+          <LogoGLB />
         </div>
 
         {/* Tagline */}

@@ -100,6 +100,60 @@ async function startServer() {
   });
   app.use(express.json());
 
+  /* ── AUTH API (Discord OAuth) ── */
+  app.post("/api/auth/login", (req, res) => {
+    // Mock Discord OAuth response - à remplacer avec vrai OAuth
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ error: "Authorization code required" });
+    }
+    
+    // Simulation d'utilisateur Discord
+    const mockUser = {
+      id: "123456789",
+      username: "darkvolt_user",
+      discriminator: "0001",
+      avatar: "avatar_hash",
+      email: "user@example.com",
+      verified: true
+    };
+    
+    res.json({
+      user: mockUser,
+      token: "mock_jwt_token_" + Date.now(),
+      expiresIn: 3600
+    });
+  });
+
+  app.post("/api/auth/refresh", (req, res) => {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: "Token required" });
+    }
+    
+    // Mock refresh token
+    res.json({
+      token: "mock_jwt_token_" + Date.now(),
+      expiresIn: 3600
+    });
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    res.json({ success: true });
+  });
+
+  app.get("/api/auth/me", (req, res) => {
+    // Mock current user
+    res.json({
+      id: "123456789",
+      username: "darkvolt_user",
+      discriminator: "0001",
+      avatar: "avatar_hash",
+      email: "user@example.com",
+      verified: true
+    });
+  });
+
   /* ── STREAM API ── */
   app.get("/api/stream/status", (_req, res) => res.json(streamStatus));
 

@@ -319,17 +319,19 @@ async function startServer() {
   /* ── Discord Webhook pour Recrutement DJ ── */
   app.post("/api/dj-application", express.json(), async (req, res) => {
     try {
+      console.log('[DarkVolt] DJ application received:', req.body);
+      
       const { message, applicant, email, discord } = req.body;
       
       // Webhook Discord (à configurer avec l'URL réelle du salon 🎧𝑟𝑒𝑐𝑟𝑢𝑡𝑒𝑚𝑒𝑛𝑡-𝑑𝑗-𝑜𝑓𝑓𝑖𝑐𝑖𝑒𝑙🎧)
       const discordWebhookUrl = process.env.DISCORD_RECRUITMENT_WEBHOOK_URL;
       
+      console.log('[DarkVolt] Discord webhook URL configured:', !!discordWebhookUrl);
+      
       if (!discordWebhookUrl) {
-        console.warn('[DarkVolt] Discord webhook URL not configured');
+        console.error('[DarkVolt] Discord webhook URL not configured');
         return res.status(500).json({ error: 'Webhook not configured' });
       }
-
-      console.log('[DarkVolt] Sending to Discord webhook:', discordWebhookUrl);
 
       const payload = {
         content: `🎧 **NOUVELLE CANDIDATURE DJ** 🎧\n\n**${applicant}** (${email}) - ${discord}`,
@@ -344,29 +346,34 @@ async function startServer() {
         }]
       };
 
+      console.log('[DarkVolt] Sending to Discord webhook...');
+      
       const response = await fetch(discordWebhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'DarkVolt-DJ-Recruitment/1.0',
         },
         body: JSON.stringify(payload)
       });
 
+      console.log('[DarkVolt] Discord webhook response status:', response.status);
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[DarkVolt] Discord webhook error:', response.status, errorText);
+        console.error('[DarkVolt] Discord webhook error response:', errorText);
         throw new Error(`Discord webhook failed: ${response.status} - ${errorText}`);
       }
 
-      const responseData = await response.json();
-      console.log(`[DarkVolt] DJ application submitted: ${applicant}`);
-      console.log('[DarkVolt] Discord response:', responseData);
+      const responseData = await response.text();
+      console.log('[DarkVolt] Discord webhook success:', responseData);
+      console.log(`[DarkVolt] DJ application submitted successfully: ${applicant}`);
+      
       res.status(200).json({ success: true, message: 'Application sent to Discord' });
       
     } catch (error) {
       console.error('[DarkVolt] Error sending DJ application:', error);
-      res.status(500).json({ error: 'Failed to send application' });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: 'Failed to send application', details: errorMessage });
     }
   });
 

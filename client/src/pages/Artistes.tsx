@@ -692,18 +692,30 @@ export default function Artistes() {
           <div className="flex flex-wrap gap-4 justify-center">
             <button
               onClick={() => navigate('/recrutement-dj')}
-              className="font-orbitron font-bold text-xs tracking-[0.3em] uppercase px-8 py-4 transition-all duration-300"
+              className="font-orbitron font-bold text-sm tracking-[0.2em] uppercase px-12 py-5 transition-all duration-300 transform hover:scale-105"
               style={{
-                background: 'transparent',
-                border: `1px solid ${O}`,
-                color: O,
-                clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
-                boxShadow: `0 0 20px ${O}33`,
+                background: `linear-gradient(135deg, ${O}, ${R})`,
+                border: `2px solid ${O}`,
+                color: '#050505',
+                clipPath: 'polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%)',
+                boxShadow: `0 0 30px ${O}66, inset 0 0 20px rgba(255,255,255,0.1)`,
+                textShadow: '0 0 10px rgba(0,0,0,0.8)',
+                letterSpacing: '0.3em',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = O; (e.currentTarget as HTMLButtonElement).style.color = '#050505'; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 40px ${O}`; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = O; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 20px ${O}33`; }}
+              onMouseEnter={e => { 
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.background = `linear-gradient(135deg, ${R}, ${O})`;
+                btn.style.boxShadow = `0 0 50px ${O}, 0 0 80px ${O}33, inset 0 0 30px rgba(255,255,255,0.2)`;
+                btn.style.transform = 'scale(1.05) translateY(-2px)';
+              }}
+              onMouseLeave={e => { 
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.background = `linear-gradient(135deg, ${O}, ${R})`;
+                btn.style.boxShadow = `0 0 30px ${O}66, inset 0 0 20px rgba(255,255,255,0.1)`;
+                btn.style.transform = 'scale(1) translateY(0)';
+              }}
             >
-              {t('artists.djRecruitmentBtn') || 'RECRUTEMENT DJ'}
+              🎧 {t('artists.djRecruitmentBtn') || 'RECRUTEMENT DJ'} 🎧
             </button>
             <button
               onClick={() => navigate('/soumettre-un-mix')}

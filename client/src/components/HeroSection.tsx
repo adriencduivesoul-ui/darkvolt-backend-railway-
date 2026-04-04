@@ -299,6 +299,33 @@ export default function HeroSection() {
           >
             {t('hero.enterPlatform')}
           </a>
+          <a
+            href="/recrutement-dj"
+            onClick={e => { e.preventDefault(); navigate('/recrutement-dj'); }}
+            className="group font-orbitron font-bold tracking-[0.15em] text-sm uppercase px-10 py-4 transition-all duration-300 transform hover:scale-105"
+            style={{
+              background: 'linear-gradient(135deg, #FF6B35, #FF1A1A)',
+              color: '#050505',
+              border: '2px solid #FF6B35',
+              boxShadow: '0 0 30px #FF6B3566, inset 0 0 20px rgba(255,255,255,0.1)',
+              clipPath: 'polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%)',
+              textShadow: '0 0 8px rgba(0,0,0,0.8)',
+            }}
+            onMouseEnter={e => {
+              const btn = e.currentTarget as HTMLAnchorElement;
+              btn.style.background = 'linear-gradient(135deg, #FF1A1A, #FF6B35)';
+              btn.style.boxShadow = '0 0 50px #FF6B35, 0 0 80px #FF6B3533, inset 0 0 30px rgba(255,255,255,0.2)';
+              btn.style.transform = 'scale(1.05) translateY(-2px)';
+            }}
+            onMouseLeave={e => {
+              const btn = e.currentTarget as HTMLAnchorElement;
+              btn.style.background = 'linear-gradient(135deg, #FF6B35, #FF1A1A)';
+              btn.style.boxShadow = '0 0 30px #FF6B3566, inset 0 0 20px rgba(255,255,255,0.1)';
+              btn.style.transform = 'scale(1) translateY(0)';
+            }}
+          >
+            🎧 DJ RECRUITMENT 🎧
+          </a>
         </div>
 
         {/* Live indicator */}

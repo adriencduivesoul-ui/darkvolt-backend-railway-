@@ -18,6 +18,7 @@ export default function Footer() {
   const communityLinks = [
     { label: t('footer.discord'), href: 'https://discord.com/invite/yr25MqEN' },
     { label: t('footer.artists'), href: '/artistes' },
+    { label: '🎧 RECRUTEMENT DJ', href: '/recrutement-dj' },
     { label: t('footer.submitMix'), href: '/soumettre-un-mix' },
   ];
   const legalLinks = [

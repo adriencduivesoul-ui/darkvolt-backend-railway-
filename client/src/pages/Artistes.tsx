@@ -715,7 +715,7 @@ export default function Artistes() {
                 btn.style.transform = 'scale(1) translateY(0)';
               }}
             >
-              🎧 {t('artists.djRecruitmentBtn') || 'RECRUTEMENT DJ'} 🎧
+              🎧 {t('Recruitment DJ') || 'RECRUTEMENT DJ'} 🎧
             </button>
             <button
               onClick={() => navigate('/soumettre-un-mix')}

@@ -25,6 +25,9 @@ import LiveStream from './pages/LiveStream';
 import Archives from './pages/Archives';
 import AuthDiscordCallback from './pages/AuthDiscordCallback';
 import StreamTest from './pages/StreamTest';
+import Blog from "./pages/Blog";
+import BlogArticle from "./pages/BlogArticle";
+import BlogEditor from "./pages/BlogEditor";
 
 function Router() {
   return (
@@ -43,6 +46,9 @@ function Router() {
       <Route path={"/archives"} component={Archives} />
       <Route path={"/auth/discord"} component={AuthDiscordCallback} />
       <Route path={"/stream-test"} component={StreamTest} />
+      <Route path={"/blog"} component={Blog} />
+      <Route path={"/blog/:slug"} component={BlogArticle} />
+      <Route path={"/blog/editor"} component={BlogEditor} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

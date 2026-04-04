@@ -39,6 +39,7 @@ export default function Navigation() {
     { label: t('nav.live'), href: '#player' },
     { label: t('nav.univers'), href: '#features' },
     { label: t('nav.shows'), href: '#shows' },
+    { label: 'Underground News', href: '/blog' },
     { label: t('nav.artiste'), href: '/artistes' },
     { label: t('nav.contact'), href: '/contact' },
   ];

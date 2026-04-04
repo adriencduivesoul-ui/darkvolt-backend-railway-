@@ -413,69 +413,151 @@ async function startServer() {
     });
   });
 
-  /* ── API ONLY (pas de static files) ── */
-  app.get("/", (_req, res) => {
-    res.status(200).json({ service: "DarkVolt API", status: "running" });
+  /* ── BLOG API ── */
+  app.get("/api/blog/articles", async (req, res) => {
+    try {
+      const { category, limit = 6, offset = 0, featured } = req.query;
+      
+      // Mock data - remplacer par Supabase plus tard
+      const mockArticles = [
+        {
+          id: "1",
+          title: "La Renaissance de la Techno Industrielle",
+          slug: "renaissance-techno-industrielle",
+          excerpt: "Exploration du renouveau de la techno industrielle dans la scène underground européenne.",
+          content: "# La Renaissance de la Techno Industrielle\n\nLa scène techno industrielle connaît actuellement un renouveau sans précédent...",
+          featured_image_url: "/img/blog/techno-industrial.jpg",
+          author_id: "1",
+          status: "published",
+          category: "industrial",
+          tags: ["techno", "industrial", "underground"],
+          sources: ["https://ra.co", "https://factmag.com"],
+          read_time_minutes: 5,
+          view_count: 1234,
+          like_count: 89,
+          is_featured: true,
+          published_at: "2024-01-15T10:00:00Z",
+          created_at: "2024-01-15T10:00:00Z",
+          updated_at: "2024-01-15T10:00:00Z",
+          author_username: "darkvolt_admin",
+          author_avatar: "/img/avatars/admin.jpg",
+        },
+        {
+          id: "2",
+          title: "Interview: DJ Noir sur la Scene Darkwave",
+          slug: "interview-dj-noir-darkwave",
+          excerpt: "Rencontre exclusive avec DJ Noir, pionnier de la scène darkwave française.",
+          content: "# Interview: DJ Noir sur la Scene Darkwave\n\nDans une interview exclusive...",
+          featured_image_url: "/img/blog/dj-noir.jpg",
+          author_id: "1",
+          status: "published",
+          category: "interviews",
+          tags: ["interview", "darkwave", "dj noir"],
+          sources: ["https://darkvolt.fr"],
+          read_time_minutes: 3,
+          view_count: 856,
+          like_count: 67,
+          is_featured: false,
+          published_at: "2024-01-12T14:30:00Z",
+          created_at: "2024-01-12T14:30:00Z",
+          updated_at: "2024-01-12T14:30:00Z",
+          author_username: "darkvolt_admin",
+          author_avatar: "/img/avatars/admin.jpg",
+        },
+        {
+          id: "3",
+          title: "Les Meilleurs Synthétiseurs pour la Musique EBM",
+          slug: "meilleurs-synthesiseurs-ebm",
+          excerpt: "Guide complet des synthétiseurs essentiels pour créer de la musique EBM authentique.",
+          content: "# Les Meilleurs Synthétiseurs pour la Musique EBM\n\nL'EBM nécessite des synthétiseurs spécifiques...",
+          featured_image_url: "/img/blog/synthesiseurs-ebm.jpg",
+          author_id: "1",
+          status: "published",
+          category: "reviews",
+          tags: ["synthétiseur", "ebm", "gear"],
+          sources: ["https://soundonsound.com", "https://emusician.com"],
+          read_time_minutes: 7,
+          view_count: 2341,
+          like_count: 156,
+          is_featured: true,
+          published_at: "2024-01-10T09:15:00Z",
+          created_at: "2024-01-10T09:15:00Z",
+          updated_at: "2024-01-10T09:15:00Z",
+          author_username: "darkvolt_admin",
+          author_avatar: "/img/avatars/admin.jpg",
+        }
+      ];
+      
+      let filteredArticles = mockArticles.filter(article => article.status === 'published');
+      
+      if (category && category !== 'all') {
+        filteredArticles = filteredArticles.filter(article => article.category === category);
+      }
+      
+      if (featured === 'true') {
+        filteredArticles = filteredArticles.filter(article => article.is_featured);
+      }
+      
+      const limitedArticles = filteredArticles.slice(Number(offset), Number(offset) + Number(limit));
+      
+      res.json({
+        articles: limitedArticles,
+        total: filteredArticles.length,
+        hasMore: Number(offset) + Number(limit) < filteredArticles.length
+      });
+      
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la récupération des articles:", error);
+      res.status(500).json({ error: "Internal server error", details: error.message });
+    }
   });
 
-  /* ── Discord Webhook pour Recrutement DJ ── */
-  app.post("/api/dj-application", express.json(), async (req, res) => {
+  app.get("/api/blog/articles/:slug", async (req, res) => {
     try {
-      console.log('[DarkVolt] DJ application received:', req.body);
+      const { slug } = req.params;
       
-      const { message, applicant, email, discord } = req.body;
-      
-      // Webhook Discord (à configurer avec l'URL réelle du salon 🎧𝑟𝑒𝑐𝑟𝑢𝑡𝑒𝑚𝑒𝑛𝑡-𝑑𝑗-𝑜𝑓𝑓𝑖𝑐𝑖𝑒𝑙🎧)
-      const discordWebhookUrl = process.env.DISCORD_RECRUITMENT_WEBHOOK_URL;
-      
-      console.log('[DarkVolt] Discord webhook URL configured:', !!discordWebhookUrl);
-      
-      if (!discordWebhookUrl) {
-        console.error('[DarkVolt] Discord webhook URL not configured');
-        return res.status(500).json({ error: 'Webhook not configured' });
-      }
+      // Mock data - remplacer par Supabase plus tard
+      const mockArticle = {
+        id: "1",
+        title: "La Renaissance de la Techno Industrielle",
+        slug: slug,
+        excerpt: "Exploration du renouveau de la techno industrielle dans la scène underground européenne.",
+        content: `# La Renaissance de la Techno Industrielle
 
-      const payload = {
-        content: `🎧 **NOUVELLE CANDIDATURE DJ** 🎧\n\n**${applicant}** (${email}) - ${discord}`,
-        embeds: [{
-          title: `Candidature DJ - ${applicant}`,
-          description: message,
-          color: 0x39FF14, // DarkVolt green
-          timestamp: new Date().toISOString(),
-          footer: {
-            text: 'DarkVolt Radio - Recrutement Officiel'
-          }
-        }]
+La scène techno industrielle connaît actuellement un renouveau sans précédent. Des artistes comme **Blanck Mass** et **Industrial Complex** repoussent les limites du genre, mêlant rythmes implacables et paysages sonores dystopiques.
+
+## Les Racines Historiques
+
+Née dans les années 80, la techno industrielle s'est inspirée des pionniers comme **Throbbing Gristle** et **Cabaret Voltaire**.
+
+## La Scène Actuelle
+
+Les festivals underground en Europe et en Amérique du Nord voient émerger une nouvelle génération de producteurs.
+
+*Sources: Resident Advisor, Fact Magazine*`,
+        featured_image_url: "/img/blog/techno-industrial.jpg",
+        author_id: "1",
+        status: "published",
+        category: "industrial",
+        tags: ["techno", "industrial", "underground", "europe"],
+        sources: ["https://ra.co", "https://factmag.com"],
+        read_time_minutes: 12,
+        view_count: 1234,
+        like_count: 89,
+        is_featured: true,
+        published_at: "2024-01-15T10:00:00Z",
+        created_at: "2024-01-15T10:00:00Z",
+        updated_at: "2024-01-15T10:00:00Z",
+        author_username: "darkvolt_admin",
+        author_avatar: "/img/avatars/admin.jpg",
+        author_bio: "Administrateur principal de DarkVolt - Underground News. Passionné de musique electro et culture underground.",
       };
-
-      console.log('[DarkVolt] Sending to Discord webhook...');
       
-      const response = await fetch(discordWebhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('[DarkVolt] Discord webhook response status:', response.status);
+      res.json(mockArticle);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[DarkVolt] Discord webhook error response:', errorText);
-        throw new Error(`Discord webhook failed: ${response.status} - ${errorText}`);
-      }
-
-      const responseData = await response.text();
-      console.log('[DarkVolt] Discord webhook success:', responseData);
-      console.log(`[DarkVolt] DJ application submitted successfully: ${applicant}`);
-      
-      res.status(200).json({ success: true, message: 'Application sent to Discord' });
-      
-    } catch (error) {
-      console.error('[DarkVolt] Error sending DJ application:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      res.status(500).json({ error: 'Failed to send application', details: errorMessage });
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la récupération de l'article:", error);
+      res.status(500).json({ error: "Internal server error", details: error.message });
     }
   });
 

@@ -15,6 +15,7 @@ import Preloader from '@/components/Preloader';
 import ShowsSection from '@/components/ShowsSection';
 import ScrollReveal from '@/components/ScrollReveal';
 import BackToTop from '@/components/BackToTop';
+import BlogLatestArticles from '@/components/BlogLatestArticles';
 
 export default function Home() {
   const [preloaderDone, setPreloaderDone] = useState(false);
@@ -67,6 +68,9 @@ export default function Home() {
           <ShowsSection />
         </ScrollReveal>
         <ScrollReveal threshold={0.08} delay={0.05}>
+          <BlogLatestArticles />
+        </ScrollReveal>
+        <ScrollReveal threshold={0.08} delay={0.1}>
           <ManifestoSection />
         </ScrollReveal>
         <ScrollReveal threshold={0.05}>

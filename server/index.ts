@@ -4,6 +4,7 @@ import { Server as SocketIO } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
+import cors from "cors";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,13 +77,25 @@ function syncViewerCount(io: SocketIO) {
 
 async function startServer() {
   const app = express();
+  
+  // CORS middleware
+  app.use(cors({
+    origin: process.env.NODE_ENV === "production" 
+      ? ["https://darkvolt.cuda9641.odns.fr", "https://www.darkvolt.cuda9641.odns.fr"] 
+      : ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-User-ID"]
+  }));
+  
   const server = createServer(app);
   const io = new SocketIO(server, { 
     cors: { 
       origin: process.env.NODE_ENV === "production" 
-        ? ["https://ton-domaine-o2switch.fr", "https://www.ton-domaine-o2switch.fr"] 
-        : "*", 
-      methods: ["GET", "POST"] 
+        ? ["https://darkvolt.cuda9641.odns.fr", "https://www.darkvolt.cuda9641.odns.fr"] 
+        : ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+      methods: ["GET", "POST"],
+      credentials: true
     } 
   });
   app.use(express.json());

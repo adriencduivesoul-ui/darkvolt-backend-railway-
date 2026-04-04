@@ -103,15 +103,12 @@ async function startServer() {
   /* ── AUTH API (Discord OAuth) ── */
   app.post("/api/auth/login", (req, res) => {
     // Mock Discord OAuth response - à remplacer avec vrai OAuth
-    const { code } = req.body;
-    if (!code) {
-      return res.status(400).json({ error: "Authorization code required" });
-    }
+    const { code, username, password } = req.body;
     
-    // Simulation d'utilisateur Discord
+    // Simulation d'utilisateur Discord (accepte sans code pour l'instant)
     const mockUser = {
       id: "123456789",
-      username: "darkvolt_user",
+      username: username || "darkvolt_user",
       discriminator: "0001",
       avatar: "avatar_hash",
       email: "user@example.com",

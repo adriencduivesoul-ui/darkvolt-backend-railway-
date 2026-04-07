@@ -71,7 +71,7 @@ const ARTISTS: Artist[] = [
     symbol: 'NV',
     origin: 'Haute-Saône, France',
     avatar: '/img/DJNRV-profile.avif',
-    glb3d: '/djnrv-3d-opt.glb',
+    glb3d: '/Djnrv-3d.glb',
   },
 ];
 

@@ -35,8 +35,10 @@ interface Artist {
   featured?: boolean;
   origin: string;
   avatar?: string;
-  glb3d?: string;   /* chemin GLB portrait 3D */
-  glbLogo?: string; /* logo PNG en fond du GLB */
+  glb3d?: string;          /* chemin GLB portrait 3D */
+  glbLogo?: string;         /* logo PNG en fond du GLB */
+  glb3dYOffset?: number;    /* décalage vertical du modèle */
+  glb3dScale?: number;      /* multiplicateur de taille du modèle */
   soundcloud?: string;
   facebook?: string;
 }
@@ -72,6 +74,8 @@ const ARTISTS: Artist[] = [
     origin: 'Haute-Saône, France',
     avatar: '/img/DJNRV-profile.avif',
     glb3d: '/Djnrv-3d.glb',
+    glb3dYOffset: 0.35,
+    glb3dScale: 0.82,
   },
 ];
 
@@ -122,6 +126,8 @@ function ArtistCard({ artist, visible, delay = 0 }: { artist: Artist; visible: b
               hovered={hovered}
               accent={c}
               mode="card"
+              yOffset={artist.glb3dYOffset}
+              scaleMultiplier={artist.glb3dScale}
             />
           ) : artist.avatar && (
             <>
@@ -301,6 +307,8 @@ function FeaturedCard({ artist, visible }: { artist: Artist; visible: boolean })
               logoPath={artist.glbLogo}
               hovered={hovered}
               accent={c}
+              yOffset={artist.glb3dYOffset}
+              scaleMultiplier={artist.glb3dScale}
             />
             <div className="absolute inset-0 pointer-events-none" style={{
               background: `linear-gradient(90deg, #050505 38%, #05050580 65%, transparent 100%)`,

@@ -20,11 +20,13 @@ const INIT_MS  = 200;
 const G = '#39FF14';
 
 interface Props {
-  glbPath:   string;
-  logoPath?: string;              /* optionnel — pas de plan logo si absent */
-  hovered:   boolean;
-  accent?:   string;
-  mode?:     'featured' | 'card'; /* 'featured' = right-side portrait, 'card' = full area */
+  glbPath:          string;
+  logoPath?:        string;              /* optionnel — pas de plan logo si absent */
+  hovered:          boolean;
+  accent?:          string;
+  mode?:            'featured' | 'card'; /* 'featured' = right-side portrait, 'card' = full area */
+  yOffset?:         number;             /* décalage vertical additionnel du modèle */
+  scaleMultiplier?: number;             /* multiplicateur de taille (1.0 = défaut) */
 }
 
 export default function ArtistPortraitGLB({
@@ -33,6 +35,8 @@ export default function ArtistPortraitGLB({
   hovered,
   accent = G,
   mode = 'featured',
+  yOffset = 0,
+  scaleMultiplier = 1.0,
 }: Props) {
   const mountRef   = useRef<HTMLDivElement>(null);
   const hoveredRef = useRef(hovered);
@@ -131,11 +135,11 @@ export default function ArtistPortraitGLB({
         const center = box.getCenter(new THREE.Vector3());
         const size   = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        targetScale  = 4.0 / maxDim;
+        targetScale  = (4.0 / maxDim) * scaleMultiplier;
 
         model.position.copy(center).negate();
         /* Lever légèrement le modèle pour un cadrage portrait */
-        model.position.y += size.y * 0.08;
+        model.position.y += size.y * 0.08 + yOffset;
         baseY  = model.position.y;
         model.scale.setScalar(0.001); /* départ tiny → spring reveal */
 

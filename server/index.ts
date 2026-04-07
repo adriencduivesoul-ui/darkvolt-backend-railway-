@@ -81,7 +81,7 @@ async function startServer() {
   // CORS middleware
   app.use(cors({
     origin: process.env.NODE_ENV === "production" 
-      ? ["https://darkvolt.cuda9641.odns.fr", "https://www.darkvolt.cuda9641.odns.fr"] 
+      ? ["https://darkvolt.fr", "https://www.darkvolt.fr"] 
       : ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -92,7 +92,7 @@ async function startServer() {
   const io = new SocketIO(server, { 
     cors: { 
       origin: process.env.NODE_ENV === "production" 
-        ? ["https://darkvolt.cuda9641.odns.fr", "https://www.darkvolt.cuda9641.odns.fr"] 
+        ? ["https://darkvolt.fr", "https://www.darkvolt.fr"] 
         : ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
       methods: ["GET", "POST"],
       credentials: true

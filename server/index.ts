@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
 import cors from "cors";
+import { installStreamDiagnostics } from "./streamDiagnostics.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,6 +100,15 @@ async function startServer() {
     } 
   });
   app.use(express.json());
+
+  // Metrics only: no audio payloads. Admin endpoint is closed unless
+  // ADMIN_DIAGNOSTICS_TOKEN is configured securely on Railway.
+  installStreamDiagnostics(app, io, () => ({
+    isLive: streamStatus.isLive,
+    sessionId: streamStatus.startedAt ? String(streamStatus.startedAt) : null,
+    broadcasterSocketId,
+    viewerSocketIds: new Set(activeViewers.keys()),
+  }));
 
   /* ── HEALTHCHECK ── */
   app.get("/", (req, res) => {

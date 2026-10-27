@@ -1,0 +1,40 @@
+name: DarkVolt backend diagnostics CI
+on:
+  pull_request:
+    paths:
+      - "server/**"
+      - "package.json"
+      - ".github/workflows/darkvolt-backend-ci.yml"
+  workflow_dispatch:
+jobs:
+  verify-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Bundle server
+        run: npm run build
+      - name: Runtime smoke test (no external deployments)
+        env:
+          PORT: "32015"
+          NODE_ENV: production
+          ADMIN_DIAGNOSTICS_TOKEN: "integration-test-secret-not-production-123456789"
+        run: |
+          node dist/index.js > /tmp/darkvolt.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            curl -fsS http://127.0.0.1:32015/ >/tmp/status.json && break
+            sleep 1
+          done
+          node -e "const x=require('/tmp/status.json'); if(x.status!=='ok') process.exit(1)"
+          STATUS=$(curl -s -o /tmp/unauthorized.json -w '%{http_code}' http://127.0.0.1:32015/api/internal/stream-diagnostics)
+          test "$STATUS" = "403"
+          STATUS=$(curl -s -o /tmp/authorized.json -w '%{http_code}' -H "Authorization: Bearer $ADMIN_DIAGNOSTICS_TOKEN" http://127.0.0.1:32015/api/internal/stream-diagnostics)
+          test "$STATUS" = "200"
+          node -e "const x=require('/tmp/authorized.json'); if(x.schemaVersion!==1 || !Array.isArray(x.samples)) process.exit(1)"
